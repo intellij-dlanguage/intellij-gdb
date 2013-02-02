@@ -1,9 +1,24 @@
 package uk.co.cwspencer.ideagdb.run;
 
+import com.intellij.execution.ExecutionException;
+import com.intellij.execution.ExecutionResult;
+import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.RunProfile;
+import com.intellij.execution.configurations.RunProfileState;
 import com.intellij.execution.executors.DefaultDebugExecutor;
 import com.intellij.execution.runners.DefaultProgramRunner;
+import com.intellij.execution.runners.ExecutionEnvironment;
+import com.intellij.execution.ui.RunContentDescriptor;
+import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.project.Project;
+import com.intellij.xdebugger.XDebugProcess;
+import com.intellij.xdebugger.XDebugProcessStarter;
+import com.intellij.xdebugger.XDebugSession;
+import com.intellij.xdebugger.XDebuggerManager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import uk.co.cwspencer.ideagdb.debug.GdbDebugProcess;
+import uk.co.cwspencer.ideagdb.debug.GdbSuspendContext;
 
 public class GdbRunner extends DefaultProgramRunner
 {
@@ -19,5 +34,37 @@ public class GdbRunner extends DefaultProgramRunner
 	{
 		return DefaultDebugExecutor.EXECUTOR_ID.equals(executorId) &&
 			profile instanceof GdbRunConfiguration;
+	}
+
+	@Override
+	protected RunContentDescriptor doExecute(Project project, Executor executor,
+		RunProfileState state, RunContentDescriptor contentToReuse, ExecutionEnvironment env)
+		throws ExecutionException
+	{
+		FileDocumentManager.getInstance().saveAllDocuments();
+		return createContentDescriptor(project, executor, state, contentToReuse, env);
+	}
+
+	@Nullable
+	protected RunContentDescriptor createContentDescriptor(Project project, final Executor executor,
+		final RunProfileState state, RunContentDescriptor contentToReuse, ExecutionEnvironment env)
+		throws ExecutionException
+	{
+		final XDebugSession debugSession = XDebuggerManager.getInstance(project).startSession(this,
+			env, contentToReuse, new XDebugProcessStarter()
+			{
+				@NotNull
+				@Override
+				public XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException
+				{
+					final ExecutionResult result = state.execute(executor, GdbRunner.this);
+					return new GdbDebugProcess(session, result);
+				}
+			});
+		debugSession.setPauseActionSupported(true);
+
+		// The debugger starts paused
+		debugSession.positionReached(new GdbSuspendContext());
+		return debugSession.getRunContentDescriptor();
 	}
 }

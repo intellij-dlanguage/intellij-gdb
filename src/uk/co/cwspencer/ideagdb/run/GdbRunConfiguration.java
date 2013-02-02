@@ -57,6 +57,6 @@ public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigur
 	public RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment env)
 		throws ExecutionException
 	{
-		return new GdbRunProfileState(env);
+		return new GdbRunProfileState(env, getProject());
 	}
 }
