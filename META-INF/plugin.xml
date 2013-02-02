@@ -37,6 +37,6 @@
   </actions>
 
   <extensions defaultExtensionNs="com.intellij">
-    <!-- Add your extensions here -->
+    <configurationType implementation="uk.co.cwspencer.ideagdb.run.GdbRunConfigurationType"/>
   </extensions>
 </idea-plugin>
