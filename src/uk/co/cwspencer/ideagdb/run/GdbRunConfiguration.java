@@ -5,6 +5,7 @@ import com.intellij.execution.Executor;
 import com.intellij.execution.configurations.ConfigurationFactory;
 import com.intellij.execution.configurations.ModuleBasedConfiguration;
 import com.intellij.execution.configurations.RunConfiguration;
+import com.intellij.execution.configurations.RunConfigurationWithSuppressedDefaultDebugAction;
 import com.intellij.execution.configurations.RunProfileState;
 import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.RunConfigurationWithSuppressedDefaultRunAction;
@@ -18,7 +19,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 
 public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigurationModule>
-	implements RunConfigurationWithSuppressedDefaultRunAction
+	implements RunConfigurationWithSuppressedDefaultRunAction,
+	RunConfigurationWithSuppressedDefaultDebugAction
 {
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.run.GdbRunConfiguration");
@@ -55,7 +57,6 @@ public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigur
 	public RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment env)
 		throws ExecutionException
 	{
-		m_log.warn("getState: stub");
-		return null;
+		return new GdbRunProfileState(env);
 	}
 }

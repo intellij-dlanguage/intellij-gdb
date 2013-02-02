@@ -38,5 +38,6 @@
 
   <extensions defaultExtensionNs="com.intellij">
     <configurationType implementation="uk.co.cwspencer.ideagdb.run.GdbRunConfigurationType"/>
+    <programRunner implementation="uk.co.cwspencer.ideagdb.run.GdbRunner" order="last"/>
   </extensions>
 </idea-plugin>
