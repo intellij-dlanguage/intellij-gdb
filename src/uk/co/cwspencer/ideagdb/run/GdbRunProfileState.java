@@ -42,18 +42,6 @@ public class GdbRunProfileState implements RunProfileState
 	private GdbFacet m_facet;
 	private ConsoleView m_console;
 
-	// Handle to the ASCII character set
-	private static Charset m_ascii = Charset.forName("US-ASCII");
-
-	// Handle to the GDB process
-	private Process m_gdbProcess;
-
-	// Token which the next GDB command will be sent with
-	private long m_token = 1;
-
-	// Flag indicating whether we have sent the user-specified startup commands to GDB yet
-	private boolean m_sentStartupCommands = false;
-
 	public GdbRunProfileState(@NotNull ExecutionEnvironment env, @NotNull GdbFacet facet)
 	{
 		m_env = env;
@@ -72,16 +60,7 @@ public class GdbRunProfileState implements RunProfileState
 			TextConsoleBuilderFactory.getInstance().createBuilder(project);
 		m_console = builder.getConsole();
 
-		// Launch GDB
-		ApplicationManager.getApplication().executeOnPooledThread(new Runnable()
-			{
-				@Override
-				public void run()
-				{
-					launchGdb();
-				}
-			});
-		return new DefaultExecutionResult(m_console, processHandler);
+		return new GdbExecutionResult(m_console, processHandler, m_facet);
 	}
 
 	@Override
@@ -95,166 +74,5 @@ public class GdbRunProfileState implements RunProfileState
 	public ConfigurationPerRunnerSettings getConfigurationSettings()
 	{
 		return m_env.getConfigurationSettings();
-	}
-
-	/**
-	 * Launches the GDB process.
-	 */
-	private void launchGdb()
-	{
-		try
-		{
-			if (m_gdbProcess != null)
-			{
-				throw new IllegalStateException("GDB process has already been started");
-			}
-
-			// Launch the process
-			m_console.print("> " + m_facet.getConfiguration().GDB_PATH + " --interpreter=mi2\n",
-				ConsoleViewContentType.USER_INPUT);
-			final String[] commandLine = {
-				m_facet.getConfiguration().GDB_PATH,
-				"--interpreter=mi2" };
-			m_gdbProcess = Runtime.getRuntime().exec(commandLine);
-
-			// Start listening for data
-			GdbMiParser parser = new GdbMiParser();
-
-			// Read from the stream
-			InputStream stream = m_gdbProcess.getInputStream();
-			byte[] buffer = new byte[4096];
-			int bytes;
-			while ((bytes = stream.read(buffer)) != -1)
-			{
-				// Process the data
-				parser.process(buffer, bytes);
-
-				// Dispatch the messages
-				List<GdbMiMessage> messages = parser.getMessages();
-				for (GdbMiMessage message : messages)
-				{
-					handleMessage(message);
-				}
-				messages.clear();
-			}
-		}
-		catch (IOException ex)
-		{
-			m_log.error("GDB processing error", ex);
-		}
-	}
-
-	/**
-	 * Handles a message received from GDB.
-	 * @param message The message.
-	 */
-	private void handleMessage(GdbMiMessage message)
-	{
-		for (GdbMiRecord record : message.records)
-		{
-			switch (record.type)
-			{
-			case Console:
-				{
-					GdbMiStreamRecord streamRecord = (GdbMiStreamRecord) record;
-					StringBuilder sb = new StringBuilder();
-					if (record.userToken != null)
-					{
-						sb.append("<");
-						sb.append(record.userToken);
-						sb.append(" ");
-					}
-					sb.append(streamRecord.message);
-					m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
-				}
-				break;
-
-			case Target:
-				{
-					GdbMiStreamRecord streamRecord = (GdbMiStreamRecord) record;
-					m_console.print(streamRecord.message, ConsoleViewContentType.NORMAL_OUTPUT);
-				}
-				break;
-
-			case Log:
-				{
-					GdbMiStreamRecord streamRecord = (GdbMiStreamRecord) record;
-					m_log.info("GDB: " + streamRecord.message);
-				}
-				break;
-
-			case Immediate:
-			case Exec:
-			case Status:
-			case Notify:
-				{
-					GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
-					StringBuilder sb = new StringBuilder();
-					if (record.userToken != null)
-					{
-						sb.append("<");
-						sb.append(record.userToken);
-						sb.append(" ");
-					}
-					else
-					{
-						sb.append("< ");
-					}
-					sb.append(resultRecord);
-					sb.append("\n");
-					m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
-				}
-				break;
-			}
-		}
-
-		// Send startup commands if necessary
-		if (!m_sentStartupCommands)
-		{
-			m_sentStartupCommands = true;
-			try
-			{
-				// Send user defined startup commands
-				String userStartupCommands = m_facet.getConfiguration().STARTUP_COMMANDS;
-				if (!userStartupCommands.isEmpty())
-				{
-					sendCommands(userStartupCommands);
-				}
-
-				// Define the application executable
-				String appPath = m_facet.getConfiguration().APP_PATH;
-				if (!appPath.isEmpty())
-				{
-					sendCommands("-file-exec-and-symbols " + GdbMiUtil.formatGdbString(appPath));
-				}
-			}
-			catch (IOException ex)
-			{
-				m_log.error("Failed to send startup commands to GDB", ex);
-			}
-		}
-	}
-
-	/**
-	 * Sends the given commands to GDB.
-	 * @param commands The commands to send.
-	 */
-	private void sendCommands(String commands) throws IOException
-	{
-		// Make sure the commands are formatted properly
-		StringBuilder sb = new StringBuilder();
-		String[] commandsArray = commands.split("\\r?\\n");
-		for (String command : commandsArray)
-		{
-			long token = m_token++;
-			sb.append(token);
-			sb.append(command);
-			sb.append("\r\n");
-			m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
-		}
-
-		byte[] message = sb.toString().getBytes(m_ascii);
-		m_gdbProcess.getOutputStream().write(message);
-		m_gdbProcess.getOutputStream().flush();
 	}
 }

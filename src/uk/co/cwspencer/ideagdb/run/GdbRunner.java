@@ -57,7 +57,7 @@ public class GdbRunner extends DefaultProgramRunner
 				public XDebugProcess start(@NotNull XDebugSession session) throws ExecutionException
 				{
 					final ExecutionResult result = state.execute(executor, GdbRunner.this);
-					return new GdbDebugProcess(session, result);
+					return new GdbDebugProcess(session, (GdbExecutionResult) result);
 				}
 			});
 		debugSession.setPauseActionSupported(true);
