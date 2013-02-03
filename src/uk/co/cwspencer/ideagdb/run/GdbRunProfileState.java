@@ -184,6 +184,9 @@ public class GdbRunProfileState implements RunProfileState
 				break;
 
 			case Immediate:
+			case Exec:
+			case Status:
+			case Notify:
 				{
 					GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
 					StringBuilder sb = new StringBuilder();
@@ -192,6 +195,10 @@ public class GdbRunProfileState implements RunProfileState
 						sb.append("<");
 						sb.append(record.userToken);
 						sb.append(" ");
+					}
+					else
+					{
+						sb.append("< ");
 					}
 					sb.append(resultRecord);
 					sb.append("\n");

@@ -33,4 +33,40 @@ public class GdbMiList
 	 * List of values. This will be null if type is not Values.
 	 */
 	public List<GdbMiValue> values;
+
+	/**
+	 * Converts the list to a string.
+	 * @return A string containing the contents of the list.
+	 */
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		switch (type)
+		{
+		case Values:
+			for (int i = 0; i != values.size(); ++i)
+			{
+				sb.append(values.get(i));
+				if (i < values.size() - 1)
+				{
+					sb.append(", ");
+				}
+			}
+			break;
+
+		case Results:
+			for (int i = 0; i != results.size(); ++i)
+			{
+				sb.append(results.get(i));
+				if (i < results.size() - 1)
+				{
+					sb.append(", ");
+				}
+			}
+			break;
+		}
+		sb.append("]");
+		return sb.toString();
+	}
 }
