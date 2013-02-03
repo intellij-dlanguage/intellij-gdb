@@ -15,9 +15,10 @@ public class GdbFacetEditorTab extends FacetEditorTab
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.facet.GdbFacetEditorTab");
 
-	private TextFieldWithBrowseButton m_gdbPath;
-	private JTextArea m_startupCommands;
 	private JPanel m_contentPanel;
+	private TextFieldWithBrowseButton m_gdbPath;
+	private TextFieldWithBrowseButton m_appPath;
+	private JTextArea m_startupCommands;
 
 	private final GdbFacetConfiguration m_configuration;
 
@@ -49,6 +50,10 @@ public class GdbFacetEditorTab extends FacetEditorTab
 		{
 			return true;
 		}
+		if (!m_configuration.APP_PATH.equals(m_appPath.getText()))
+		{
+			return true;
+		}
 		if (!m_configuration.STARTUP_COMMANDS.equals(m_startupCommands.getText()))
 		{
 			return true;
@@ -65,6 +70,7 @@ public class GdbFacetEditorTab extends FacetEditorTab
 		}
 
 		m_configuration.GDB_PATH = m_gdbPath.getText();
+		m_configuration.APP_PATH = m_appPath.getText();
 		m_configuration.STARTUP_COMMANDS = m_startupCommands.getText();
 	}
 
@@ -73,6 +79,9 @@ public class GdbFacetEditorTab extends FacetEditorTab
 	{
 		final String gdbPath = m_configuration.GDB_PATH;
 		m_gdbPath.setText(gdbPath != null ? gdbPath : "");
+
+		final String appPath = m_configuration.APP_PATH;
+		m_appPath.setText(appPath != null ? appPath : "");
 
 		final String startupCommands = m_configuration.STARTUP_COMMANDS;
 		m_startupCommands.setText(startupCommands != null ? startupCommands : "");

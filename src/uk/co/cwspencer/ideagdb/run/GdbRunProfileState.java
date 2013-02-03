@@ -26,6 +26,7 @@ import uk.co.cwspencer.ideagdb.gdbmi.GdbMiParser;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiRecord;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiStreamRecord;
+import uk.co.cwspencer.ideagdb.gdbmi.GdbMiUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +43,7 @@ public class GdbRunProfileState implements RunProfileState
 	private ConsoleView m_console;
 
 	// Handle to the ASCII character set
-	private static Charset m_ascii;
+	private static Charset m_ascii = Charset.forName("US-ASCII");
 
 	// Handle to the GDB process
 	private Process m_gdbProcess;
@@ -52,13 +53,6 @@ public class GdbRunProfileState implements RunProfileState
 
 	// Flag indicating whether we have sent the user-specified startup commands to GDB yet
 	private boolean m_sentStartupCommands = false;
-
-	/**
-	 * Static initializer. Gets a handle to the ASCII character set.
-	 */
-	{
-		m_ascii = Charset.forName("US-ASCII");
-	}
 
 	public GdbRunProfileState(@NotNull ExecutionEnvironment env, @NotNull GdbFacet facet)
 	{
@@ -206,7 +200,19 @@ public class GdbRunProfileState implements RunProfileState
 			m_sentStartupCommands = true;
 			try
 			{
-				sendCommands(m_facet.getConfiguration().STARTUP_COMMANDS);
+				// Send user defined startup commands
+				String userStartupCommands = m_facet.getConfiguration().STARTUP_COMMANDS;
+				if (!userStartupCommands.isEmpty())
+				{
+					sendCommands(userStartupCommands);
+				}
+
+				// Define the application executable
+				String appPath = m_facet.getConfiguration().APP_PATH;
+				if (!appPath.isEmpty())
+				{
+					sendCommands("-file-exec-and-symbols " + GdbMiUtil.formatGdbString(appPath));
+				}
 			}
 			catch (IOException ex)
 			{

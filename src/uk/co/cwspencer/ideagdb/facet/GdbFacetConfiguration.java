@@ -17,6 +17,7 @@ public class GdbFacetConfiguration implements FacetConfiguration
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.facet.GdbFacetConfiguration");
 
 	public String GDB_PATH = "gdb";
+	public String APP_PATH = "";
 	public String STARTUP_COMMANDS = "";
 
 	@Override
