@@ -13,8 +13,13 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.DefaultJDOMExternalizer;
+import com.intellij.openapi.util.InvalidDataException;
+import com.intellij.openapi.util.WriteExternalException;
+import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 
 import java.util.Collection;
 
@@ -47,8 +52,9 @@ public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigur
 	@Override
 	public SettingsEditor<? extends RunConfiguration> getConfigurationEditor()
 	{
+		Project project = getProject();
 		GdbRunConfigurationEditor<GdbRunConfiguration> editor =
-			new GdbRunConfigurationEditor<GdbRunConfiguration>();
+			new GdbRunConfigurationEditor<GdbRunConfiguration>(project);
 		return editor;
 	}
 
@@ -57,6 +63,34 @@ public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigur
 	public RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment env)
 		throws ExecutionException
 	{
-		return new GdbRunProfileState(env, getProject());
+		final Module module = getConfigurationModule().getModule();
+		if (module == null)
+		{
+			throw new ExecutionException("Module is not found");
+		}
+
+		final GdbFacet facet = GdbFacet.getInstance(module);
+		if (facet == null)
+		{
+			throw new ExecutionException("No GDB facet found for " + module.getName());
+		}
+
+		return new GdbRunProfileState(env, facet);
+	}
+
+	@Override
+	public void readExternal(Element element) throws InvalidDataException
+	{
+		super.readExternal(element);
+		readModule(element);
+		DefaultJDOMExternalizer.readExternal(this, element);
+	}
+
+	@Override
+	public void writeExternal(Element element) throws WriteExternalException
+	{
+		super.writeExternal(element);
+		writeModule(element);
+		DefaultJDOMExternalizer.writeExternal(this, element);
 	}
 }

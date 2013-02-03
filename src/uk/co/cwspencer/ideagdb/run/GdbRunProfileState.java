@@ -20,13 +20,16 @@ import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.DefaultDebugProcessHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiMessage;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiParser;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiRecord;
+import uk.co.cwspencer.ideagdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiStreamRecord;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.util.List;
 
 public class GdbRunProfileState implements RunProfileState
@@ -35,16 +38,32 @@ public class GdbRunProfileState implements RunProfileState
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.run.GdbRunProfileState");
 
 	private ExecutionEnvironment m_env;
-	private Project m_project;
+	private GdbFacet m_facet;
 	private ConsoleView m_console;
+
+	// Handle to the ASCII character set
+	private static Charset m_ascii;
 
 	// Handle to the GDB process
 	private Process m_gdbProcess;
 
-	public GdbRunProfileState(@NotNull ExecutionEnvironment env, @NotNull Project project)
+	// Token which the next GDB command will be sent with
+	private long m_token = 1;
+
+	// Flag indicating whether we have sent the user-specified startup commands to GDB yet
+	private boolean m_sentStartupCommands = false;
+
+	/**
+	 * Static initializer. Gets a handle to the ASCII character set.
+	 */
+	{
+		m_ascii = Charset.forName("US-ASCII");
+	}
+
+	public GdbRunProfileState(@NotNull ExecutionEnvironment env, @NotNull GdbFacet facet)
 	{
 		m_env = env;
-		m_project = project;
+		m_facet = facet;
 	}
 
 	@Nullable
@@ -54,8 +73,9 @@ public class GdbRunProfileState implements RunProfileState
 		ProcessHandler processHandler = new DefaultDebugProcessHandler();
 
 		// Create the console
+		Project project = m_facet.getModule().getProject();
 		final TextConsoleBuilder builder =
-			TextConsoleBuilderFactory.getInstance().createBuilder(m_project);
+			TextConsoleBuilderFactory.getInstance().createBuilder(project);
 		m_console = builder.getConsole();
 
 		// Launch GDB
@@ -125,7 +145,7 @@ public class GdbRunProfileState implements RunProfileState
 		}
 		catch (IOException ex)
 		{
-			m_log.error(ex);
+			m_log.error("GDB processing error", ex);
 		}
 	}
 
@@ -140,9 +160,18 @@ public class GdbRunProfileState implements RunProfileState
 			switch (record.type)
 			{
 			case Console:
+			case Log:
 				{
 					GdbMiStreamRecord streamRecord = (GdbMiStreamRecord) record;
-					m_console.print(streamRecord.message, ConsoleViewContentType.SYSTEM_OUTPUT);
+					StringBuilder sb = new StringBuilder();
+					if (record.userToken != null)
+					{
+						sb.append("<");
+						sb.append(record.userToken);
+						sb.append(" ");
+					}
+					sb.append(streamRecord.message);
+					m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
 				}
 				break;
 
@@ -152,7 +181,60 @@ public class GdbRunProfileState implements RunProfileState
 					m_console.print(streamRecord.message, ConsoleViewContentType.NORMAL_OUTPUT);
 				}
 				break;
+
+			case Immediate:
+				{
+					GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
+					StringBuilder sb = new StringBuilder();
+					if (record.userToken != null)
+					{
+						sb.append("<");
+						sb.append(record.userToken);
+						sb.append(" ");
+					}
+					sb.append(resultRecord.className);
+					sb.append("\n");
+					m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
+				}
+				break;
 			}
 		}
+
+		// Send startup commands if necessary
+		if (!m_sentStartupCommands)
+		{
+			m_sentStartupCommands = true;
+			try
+			{
+				sendCommands(m_facet.getConfiguration().STARTUP_COMMANDS);
+			}
+			catch (IOException ex)
+			{
+				m_log.error("Failed to send startup commands to GDB", ex);
+			}
+		}
+	}
+
+	/**
+	 * Sends the given commands to GDB.
+	 * @param commands The commands to send.
+	 */
+	private void sendCommands(String commands) throws IOException
+	{
+		// Make sure the commands are formatted properly
+		StringBuilder sb = new StringBuilder();
+		String[] commandsArray = commands.split("\\r?\\n");
+		for (String command : commandsArray)
+		{
+			long token = m_token++;
+			sb.append(token);
+			sb.append(command);
+			sb.append("\r\n");
+			m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
+		}
+
+		byte[] message = sb.toString().getBytes(m_ascii);
+		m_gdbProcess.getOutputStream().write(message);
+		m_gdbProcess.getOutputStream().flush();
 	}
 }
