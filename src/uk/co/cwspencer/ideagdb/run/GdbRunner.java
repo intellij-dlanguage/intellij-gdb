@@ -18,7 +18,6 @@ import com.intellij.xdebugger.XDebuggerManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import uk.co.cwspencer.ideagdb.debug.GdbDebugProcess;
-import uk.co.cwspencer.ideagdb.debug.GdbSuspendContext;
 
 public class GdbRunner extends DefaultProgramRunner
 {
