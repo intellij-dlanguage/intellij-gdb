@@ -23,4 +23,17 @@ public class GdbMiResult
 	{
 		this.variable = variable;
 	}
+
+	/**
+	 * Converts the result to a string.
+	 * @return A string containing the name of the variable and its value.
+	 */
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append(variable);
+		sb.append(": ");
+		sb.append(value);
+		return sb.toString();
+	}
 }

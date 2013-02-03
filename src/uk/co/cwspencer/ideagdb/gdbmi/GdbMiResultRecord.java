@@ -28,4 +28,28 @@ public class GdbMiResultRecord extends GdbMiRecord
 		this.type = type;
 		this.userToken = userToken;
 	}
+
+	/**
+	 * Converts the record to a string.
+	 * @return A string containing the class name and any results.
+	 */
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append(className);
+		if (!results.isEmpty())
+		{
+			sb.append(": [");
+			for (int i = 0; i != results.size(); ++i)
+			{
+				sb.append(results.get(i));
+				if (i < results.size() - 1)
+				{
+					sb.append(", ");
+				}
+			}
+			sb.append("]");
+		}
+		return sb.toString();
+	}
 }

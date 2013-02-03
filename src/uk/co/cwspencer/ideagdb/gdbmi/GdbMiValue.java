@@ -51,4 +51,30 @@ public class GdbMiValue
 	{
 		this.type = type;
 	}
+
+	/**
+	 * Converts the value to a string.
+	 * @return A string containing the value.
+	 */
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		switch (type)
+		{
+		case String:
+			sb.append("\"");
+			sb.append(string);
+			sb.append("\"");
+			break;
+
+		case Tuple:
+			sb.append(tuple);
+			break;
+
+		case List:
+			sb.append(list);
+			break;
+		}
+		return sb.toString();
+	}
 }

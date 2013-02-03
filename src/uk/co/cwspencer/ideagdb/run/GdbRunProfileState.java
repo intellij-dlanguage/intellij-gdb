@@ -110,9 +110,10 @@ public class GdbRunProfileState implements RunProfileState
 			}
 
 			// Launch the process
-			// TODO: Don't hardcode the path
+			m_console.print("> " + m_facet.getConfiguration().GDB_PATH + " --interpreter=mi2\n",
+				ConsoleViewContentType.USER_INPUT);
 			final String[] commandLine = {
-				"C:\\Android\\toolchain\\bin\\i686-linux-android-gdb.exe",
+				m_facet.getConfiguration().GDB_PATH,
 				"--interpreter=mi2" };
 			m_gdbProcess = Runtime.getRuntime().exec(commandLine);
 
@@ -154,7 +155,6 @@ public class GdbRunProfileState implements RunProfileState
 			switch (record.type)
 			{
 			case Console:
-			case Log:
 				{
 					GdbMiStreamRecord streamRecord = (GdbMiStreamRecord) record;
 					StringBuilder sb = new StringBuilder();
@@ -176,6 +176,13 @@ public class GdbRunProfileState implements RunProfileState
 				}
 				break;
 
+			case Log:
+				{
+					GdbMiStreamRecord streamRecord = (GdbMiStreamRecord) record;
+					m_log.info("GDB: " + streamRecord.message);
+				}
+				break;
+
 			case Immediate:
 				{
 					GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
@@ -186,7 +193,7 @@ public class GdbRunProfileState implements RunProfileState
 						sb.append(record.userToken);
 						sb.append(" ");
 					}
-					sb.append(resultRecord.className);
+					sb.append(resultRecord);
 					sb.append("\n");
 					m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
 				}
