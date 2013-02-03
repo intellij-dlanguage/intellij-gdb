@@ -13,9 +13,6 @@ import javax.swing.*;
 
 public class GdbRunConfigurationType implements ConfigurationType
 {
-	private static final Logger m_log =
-		Logger.getInstance("#uk.co.cwspencer.ideagdb.run.GdbRunConfigurationType");
-
 	private final ConfigurationFactory m_factory = new ConfigurationFactory(this)
 		{
 			public RunConfiguration createTemplateConfiguration(Project project)

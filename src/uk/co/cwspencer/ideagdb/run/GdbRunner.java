@@ -62,9 +62,6 @@ public class GdbRunner extends DefaultProgramRunner
 				}
 			});
 		debugSession.setPauseActionSupported(true);
-
-		// The debugger starts paused
-		debugSession.positionReached(new GdbSuspendContext());
 		return debugSession.getRunContentDescriptor();
 	}
 }
