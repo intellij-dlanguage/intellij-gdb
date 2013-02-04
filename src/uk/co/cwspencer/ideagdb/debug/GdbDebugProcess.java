@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.co.cwspencer.ideagdb.debug.gdb.Gdb;
 import uk.co.cwspencer.ideagdb.debug.gdb.GdbListener;
 import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbEvent;
+import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbStopEvent;
 import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiStreamRecord;
@@ -143,8 +144,10 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void onGdbEventReceived(GdbEvent event)
 	{
-		// TODO: Something useful
-		m_console.print("Processed event: " + event + "\n", ConsoleViewContentType.SYSTEM_OUTPUT);
+		if (event instanceof GdbStopEvent)
+		{
+			getSession().positionReached(new GdbSuspendContext((GdbStopEvent) event));
+		}
 	}
 
 	/**

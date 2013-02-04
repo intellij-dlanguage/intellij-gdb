@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XStackFrame;
 import org.jetbrains.annotations.Nullable;
+import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbStopEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,30 +14,34 @@ public class GdbExecutionStack extends XExecutionStack
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.debug.GdbExecutionStack");
 
-	List<GdbExecutionStackFrame> m_stack;
+	// The top of the stack
+	private GdbExecutionStackFrame m_topFrame;
 
-	public GdbExecutionStack(String name)
+	/**
+	 * Constructor.
+	 * @param stopEvent The stop event.
+	 */
+	public GdbExecutionStack(GdbStopEvent stopEvent)
 	{
-		super(name);
+		super("Stack");
 
-		// Generate a dummy stack
-		m_stack = new ArrayList<GdbExecutionStackFrame>();
-		m_stack.add(new GdbExecutionStackFrame());
-		m_stack.add(new GdbExecutionStackFrame());
+		// Get the top of the stack
+		if (stopEvent.frame != null)
+		{
+			m_topFrame = new GdbExecutionStackFrame(stopEvent.frame);
+		}
 	}
 
 	@Nullable
 	@Override
 	public XStackFrame getTopFrame()
 	{
-		return m_stack.get(0);
+		return m_topFrame;
 	}
 
 	@Override
 	public void computeStackFrames(int firstFrameIndex, XStackFrameContainer container)
 	{
-		m_log.warn("computeStackFrames: parameter ignored [firstFrameIndex=" + firstFrameIndex +
-			"]");
-		container.addStackFrames(m_stack, true);
+		m_log.warn("computeStackFrames: stub");
 	}
 }
