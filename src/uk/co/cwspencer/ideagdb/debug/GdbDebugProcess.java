@@ -13,6 +13,7 @@ import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import org.jetbrains.annotations.NotNull;
 import uk.co.cwspencer.ideagdb.debug.gdb.Gdb;
 import uk.co.cwspencer.ideagdb.debug.gdb.GdbListener;
+import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbEvent;
 import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.ideagdb.gdbmi.GdbMiStreamRecord;
@@ -114,6 +115,39 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	}
 
 	/**
+	 * Called when GDB has started.
+	 */
+	@Override
+	public void onGdbStarted()
+	{
+		try
+		{
+			// Send startup commands
+			String[] commandsArray = m_facet.getConfiguration().STARTUP_COMMANDS.split("\\r?\\n");
+			for (String command : commandsArray)
+			{
+				long token = m_gdb.sendCommand(command);
+				m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
+			}
+		}
+		catch (IOException ex)
+		{
+			onGdbError(ex);
+		}
+	}
+
+	/**
+	 * Called when a GDB event is received.
+	 * @param event The event.
+	 */
+	@Override
+	public void onGdbEventReceived(GdbEvent event)
+	{
+		// TODO: Something useful
+		m_console.print("Processed event: " + event + "\n", ConsoleViewContentType.SYSTEM_OUTPUT);
+	}
+
+	/**
 	 * Called when a stream record is received.
 	 * @param record The record.
 	 */
@@ -187,27 +221,5 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 		sb.append(record);
 		sb.append("\n");
 		m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
-	}
-
-	/**
-	 * Called when GDB has started.
-	 */
-	@Override
-	public void onGdbStarted()
-	{
-		try
-		{
-			// Send startup commands
-			String[] commandsArray = m_facet.getConfiguration().STARTUP_COMMANDS.split("\\r?\\n");
-			for (String command : commandsArray)
-			{
-				long token = m_gdb.sendCommand(command);
-				m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
-			}
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
-		}
 	}
 }

@@ -13,16 +13,16 @@ public class GdbExecutionStack extends XExecutionStack
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.debug.GdbExecutionStack");
 
-	List<GdbStackFrame> m_stack;
+	List<GdbExecutionStackFrame> m_stack;
 
 	public GdbExecutionStack(String name)
 	{
 		super(name);
 
 		// Generate a dummy stack
-		m_stack = new ArrayList<GdbStackFrame>();
-		m_stack.add(new GdbStackFrame());
-		m_stack.add(new GdbStackFrame());
+		m_stack = new ArrayList<GdbExecutionStackFrame>();
+		m_stack.add(new GdbExecutionStackFrame());
+		m_stack.add(new GdbExecutionStackFrame());
 	}
 
 	@Nullable
