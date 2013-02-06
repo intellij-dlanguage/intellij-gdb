@@ -17,7 +17,7 @@ public @interface GdbMiEvent
 	GdbMiRecord.Type recordType();
 
 	/**
-	 * The event class name.
+	 * The event class name(s).
 	 */
-	String className();
+	String[] className();
 }

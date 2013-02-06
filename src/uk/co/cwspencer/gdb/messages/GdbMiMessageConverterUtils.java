@@ -18,4 +18,12 @@ public class GdbMiMessageConverterUtils
 		}
 		return longValue;
 	}
+
+	/**
+	 * Returns true if value is equal to "all".
+	 */
+	public static Boolean valueIsAll(String value)
+	{
+		return value.equals("all");
+	}
 }

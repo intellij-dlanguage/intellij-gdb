@@ -134,4 +134,43 @@ public class TestGdbMiMessageConverter
 		Assert.assertEquals("1", stoppedEvent.frame.arguments.get("argc"));
 		Assert.assertEquals("0xbfc4d4d4", stoppedEvent.frame.arguments.get("argv"));
 	}
+
+	/**
+	 * Verifies the correct conversion of a 'running' message.
+	 */
+	@Test
+	public void testRunningEvent() throws UnsupportedEncodingException
+	{
+		// Parse the message
+		GdbMiParser parser = new GdbMiParser();
+		String messageStr =
+			"*running,thread-id=\"2\"\r\n" +
+			"*running,thread-id=\"all\"\r\n" +
+			"(gdb)\r\n";
+		parser.process(messageStr.getBytes("US-ASCII"));
+		GdbMiMessage message = parser.getMessages().get(0);
+
+		// Convert the messages
+		{
+			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+			Object object = GdbMiMessageConverter.processRecord(record);
+			Assert.assertNotNull(object);
+			Assert.assertTrue(object instanceof GdbRunningEvent);
+
+			GdbRunningEvent runningEvent = (GdbRunningEvent) object;
+			Assert.assertEquals(new Boolean(false), runningEvent.allThreads);
+			Assert.assertEquals(new Integer(2), runningEvent.threadId);
+		}
+
+		{
+			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(1);
+			Object object = GdbMiMessageConverter.processRecord(record);
+			Assert.assertNotNull(object);
+			Assert.assertTrue(object instanceof GdbRunningEvent);
+
+			GdbRunningEvent runningEvent = (GdbRunningEvent) object;
+			Assert.assertEquals(new Boolean(true), runningEvent.allThreads);
+			Assert.assertNull(runningEvent.threadId);
+		}
+	}
 }

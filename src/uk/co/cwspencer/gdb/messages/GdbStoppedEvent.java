@@ -89,17 +89,9 @@ public class GdbStoppedEvent extends GdbEvent
 	 * the threads that were stopped.
 	 */
 	@GdbMiField(name = "stopped-threads", valueType = GdbMiValue.Type.String,
-		valueProcessor = "processAllStopped")
+		valueProcessor = "uk.co.cwspencer.gdb.messages.GdbMiMessageConverterUtils.valueIsAll")
 	public Boolean allStopped;
 
 	// TODO
 	//public ?? stoppedThreads;
-
-	/**
-	 * Value processor for allStopped.
-	 */
-	public Boolean processAllStopped(String value)
-	{
-		return value.equals("all");
-	}
 }

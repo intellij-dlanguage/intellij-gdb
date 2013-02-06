@@ -41,13 +41,27 @@ public class GdbMiMessageConverter
 				continue;
 			}
 
-			if (eventAnnotation.recordType() == record.type &&
-				eventAnnotation.className().equals(record.className))
+			if (eventAnnotation.recordType() == record.type)
 			{
-				// Found a matching event type wrapper
-				event = processObject(clazz, record.results);
-				break;
+				boolean match = false;
+				for (String className : eventAnnotation.className())
+				{
+					if (className.equals(record.className))
+					{
+						match = true;
+						break;
+					}
+				}
+
+				if (match)
+				{
+					// Found a matching event type wrapper
+					event = processObject(clazz, record.results);
+					break;
+				}
+
 			}
+
 		}
 		return event;
 	}

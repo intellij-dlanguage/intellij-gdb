@@ -12,5 +12,6 @@ public class GdbMiEventTypes
 		GdbConnectedEvent.class,
 		GdbErrorEvent.class,
 		GdbExitEvent.class,
+		GdbRunningEvent.class,
 		GdbStoppedEvent.class };
 }
