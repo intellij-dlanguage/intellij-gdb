@@ -54,9 +54,12 @@ public class TestGdbMiMessageConverter
 
 		Assert.assertEquals(stopEvent.frame.address, new Long(0x08048564));
 		Assert.assertEquals(stopEvent.frame.function, "main");
-		//Assert.assertEquals(stopEvent.frame.arguments, ...);  TODO
 		Assert.assertEquals(stopEvent.frame.file, "myprog.c");
 		Assert.assertEquals(stopEvent.frame.filePath, "/home/nickrob/myprog.c");
 		Assert.assertEquals(stopEvent.frame.line, new Integer(68));
+
+		Assert.assertEquals(stopEvent.frame.arguments.size(), 2);
+		Assert.assertEquals(stopEvent.frame.arguments.get("argc"), "1");
+		Assert.assertEquals(stopEvent.frame.arguments.get("argv"), "0xbfc4d4d4");
 	}
 }

@@ -1,20 +1,23 @@
 package uk.co.cwspencer.gdb.messages;
 
 import com.intellij.openapi.diagnostic.Logger;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiList;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResult;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiConversionRule;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiEnum;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiObject;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class containing rules for converting GDB/MI results to Java objects.
- * The rules are evaluated in the order they are declared in this class. Execution stops once on of
- * the rules returns a non-null value.
  */
 @SuppressWarnings("unused")
 public class GdbMiValueConversionRules
@@ -25,16 +28,17 @@ public class GdbMiValueConversionRules
 	/**
 	 * Converts results where the target type has a GdbMiObject annotation.
 	 */
-	public static Object convertValueToTypeWithGdbMiObjectAnnotation(Field field,
-		GdbMiValue.Type valueType, GdbMiResult result)
+	@GdbMiConversionRule
+	public static Object convertValueToTypeWithGdbMiObjectAnnotation(Class<?> type,
+		ParameterizedType genericType, GdbMiResult result)
 	{
 		// If the field type class has a GdbMiObject annotation then recursively process it
-		GdbMiObject objectAnnotation = field.getType().getAnnotation(GdbMiObject.class);
+		GdbMiObject objectAnnotation = type.getAnnotation(GdbMiObject.class);
 		if (objectAnnotation != null)
 		{
 			// Get the list of results
 			List<GdbMiResult> results = null;
-			switch (valueType)
+			switch (result.value.type)
 			{
 			case Tuple:
 				results = result.value.tuple;
@@ -52,21 +56,21 @@ public class GdbMiValueConversionRules
 					break;
 
 				case Values:
-					m_log.warn("Field " + field + " has a type with a GdbMiObject annotation " +
-						"and expects a list, but GDB returned a list of values rather than a " +
-						"list of results, so it cannot be processed");
+					m_log.warn(type + " has a GdbMiObject annotation and expects a list, but GDB " +
+						"returned a list of values rather than a list of results, so it cannot " +
+						"be processed");
 					return null;
 				}
 				break;
 
 			case String:
-				m_log.warn("Field " + field + " has a type with a GdbMiObject annotation, " +
-					"but expects a string from GDB; it must be a list or tuple");
+				m_log.warn(type + " has a GdbMiObject annotation, but a string is expected from " +
+					"GDB; it must be a list or tuple");
 				return null;
 			}
 
 			// Process the field
-			return GdbMiMessageConverter.processObject(field.getType(), results);
+			return GdbMiMessageConverter.processObject(type, results);
 		}
 		return null;
 	}
@@ -74,26 +78,26 @@ public class GdbMiValueConversionRules
 	/**
 	 * Converts string results to enums.
 	 */
-	public static Object convertStringToEnum(Field field, GdbMiValue.Type valueType,
+	@GdbMiConversionRule
+	public static Object convertStringToEnum(Class<?> type, ParameterizedType genericType,
 		GdbMiResult result)
 	{
 		// Check if the field type is an enum
-		if (field.getType().isEnum())
+		if (type.isEnum())
 		{
 			// Only strings can be converted
-			if (valueType != GdbMiValue.Type.String)
+			if (result.value.type != GdbMiValue.Type.String)
 			{
-				m_log.warn("Field " + field + " has an enum type but expects a " + valueType +
-					"; only strings can be converted to enums");
+				m_log.warn(type + " is an enum, but expects a " + result.value.type + "; only " +
+					"strings can be converted to enums");
 				return null;
 			}
 
 			// Check the enum has a GdbMiEnum annotation
-			GdbMiEnum enumAnnotation = field.getType().getAnnotation(GdbMiEnum.class);
+			GdbMiEnum enumAnnotation = type.getAnnotation(GdbMiEnum.class);
 			if (enumAnnotation == null)
 			{
-				m_log.warn("Field " + field + " has enum type " + field.getType() + ", but " +
-					"the enum does not have a GdbMiEnum annotation");
+				m_log.warn(type + " is an enum, but the does not have a GdbMiEnum annotation");
 				return null;
 			}
 
@@ -120,7 +124,7 @@ public class GdbMiValueConversionRules
 
 			// Search the enum
 			Enum value = null;
-			Enum[] enumConstants = (Enum[]) field.getType().getEnumConstants();
+			Enum[] enumConstants = (Enum[]) type.getEnumConstants();
 			for (Enum enumValue : enumConstants)
 			{
 				if (enumValue.name().equals(name))
@@ -139,7 +143,7 @@ public class GdbMiValueConversionRules
 			else
 			{
 				m_log.warn("Could not find an appropriate enum value for string '" +
-					result.value.string + "' for field " + field);
+					result.value.string + "' for type " + type);
 				return null;
 			}
 		}
@@ -149,11 +153,11 @@ public class GdbMiValueConversionRules
 	/**
 	 * Converts strings to simple types.
 	 */
-	public static Object convertStringToSimple(Field field, GdbMiValue.Type valueType,
+	@GdbMiConversionRule
+	public static Object convertStringToSimple(Class<?> type, ParameterizedType genericType,
 		GdbMiResult result)
 	{
-		Class<?> type = field.getType();
-		if (valueType == GdbMiValue.Type.String)
+		if (result.value.type == GdbMiValue.Type.String)
 		{
 			if (type.equals(String.class))
 			{
@@ -165,5 +169,71 @@ public class GdbMiValueConversionRules
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Converts list of tuples to a map. The tuples must all have two elements each. The variable
+	 * names of the tuples are discarded.
+	 */
+	@GdbMiConversionRule
+	public static Object convertListOfTuplesToMap(Class<?> type, ParameterizedType genericType,
+		GdbMiResult result) throws InvocationTargetException,
+		IllegalAccessException
+	{
+		if (result.value.type != GdbMiValue.Type.List || genericType == null ||
+			!type.equals(Map.class))
+		{
+			return null;
+		}
+
+		if (result.value.list.type == GdbMiList.Type.Results)
+		{
+			// Only value lists can be converted
+			return null;
+		}
+
+		Map map = new LinkedHashMap();
+		if (result.value.list.type == GdbMiList.Type.Empty)
+		{
+			return map;
+		}
+
+		// Get the key and value types from the map
+		Type[] mapTypes = genericType.getActualTypeArguments();
+		assert mapTypes.length == 2;
+		if (!(mapTypes[0] instanceof Class) || !(mapTypes[1] instanceof Class))
+		{
+			return null;
+		}
+
+		Class<?> mapKeyType = (Class<?>) mapTypes[0];
+		Class<?> mapValueType = (Class<?>) mapTypes[1];
+
+		// Process each value in the list
+		for (GdbMiValue value : result.value.list.values)
+		{
+			// Verify the value is a tuple and contains two elements
+			if (value.type != GdbMiValue.Type.Tuple || value.tuple.size() != 2)
+			{
+				return null;
+			}
+
+			Object key = GdbMiMessageConverter.convertFieldManually(mapKeyType, null,
+				value.tuple.get(0));
+			if (key == null)
+			{
+				return null;
+			}
+
+			Object newValue = GdbMiMessageConverter.convertFieldManually(mapValueType, null,
+				value.tuple.get(1));
+			if (newValue == null)
+			{
+				return null;
+			}
+
+			map.put(key, newValue);
+		}
+		return map;
 	}
 }

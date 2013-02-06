@@ -4,6 +4,8 @@ import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiObject;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
 
+import java.util.Map;
+
 /**
  * Class representing information about a stack frame from GDB.
  */
@@ -25,8 +27,12 @@ public class GdbStackFrame
 	@GdbMiField(name = "func", valueType = GdbMiValue.Type.String)
 	public String function;
 
-	// TODO
-	//public ?? arguments;
+	/**
+	 * The arguments to the function.
+	 */
+	@SuppressWarnings("unused")
+	@GdbMiField(name = "args", valueType = GdbMiValue.Type.List)
+	public Map<String, String> arguments;
 
 	/**
 	 * The name of the file being executed.

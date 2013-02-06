@@ -4,11 +4,15 @@ import com.intellij.openapi.diagnostic.Logger;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResult;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiConversionRule;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiEvent;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
 
 /**
@@ -56,47 +60,41 @@ public class GdbMiMessageConverter
 	 */
 	public static Object processObject(Class<?> clazz, List<GdbMiResult> results)
 	{
-		Object event;
 		try
 		{
-			event = clazz.newInstance();
-		}
-		catch (InstantiationException ex)
-		{
-			m_log.warn("Failed to instantiate event class " + clazz.getName(), ex);
-			return null;
-		}
-		catch (IllegalAccessException ex)
-		{
-			m_log.warn("Failed to instantiate event class " + clazz.getName(), ex);
-			return null;
-		}
+			Object event = clazz.newInstance();
 
-		// Populate the fields with data from the result
-		Field[] fields = clazz.getFields();
-		for (Field field : fields)
-		{
-			GdbMiField fieldAnnotation = field.getAnnotation(GdbMiField.class);
-			if (fieldAnnotation == null)
+			// Populate the fields with data from the result
+			Field[] fields = clazz.getFields();
+			for (Field field : fields)
 			{
-				continue;
-			}
-
-			// Find a result with the requested variable name
-			for (GdbMiResult result : results)
-			{
-				if (!fieldAnnotation.name().equals(result.variable))
+				GdbMiField fieldAnnotation = field.getAnnotation(GdbMiField.class);
+				if (fieldAnnotation == null)
 				{
 					continue;
 				}
 
-				// Found a matching field; convert the value
-				convertField(event, clazz, field, fieldAnnotation, result);
-				break;
-			}
-		}
+				// Find a result with the requested variable name
+				for (GdbMiResult result : results)
+				{
+					if (!fieldAnnotation.name().equals(result.variable))
+					{
+						continue;
+					}
 
-		return event;
+					// Found a matching field; convert the value
+					convertField(event, clazz, field, fieldAnnotation, result);
+					break;
+				}
+			}
+
+			return event;
+		}
+		catch (Throwable ex)
+		{
+			m_log.warn("Failed to convert GDB/MI message to a Java object", ex);
+			return null;
+		}
 	}
 
 	/**
@@ -108,8 +106,9 @@ public class GdbMiMessageConverter
 	 * @param fieldAnnotation The GdbMiField annotation on the field.
 	 * @param result The result to get the data from.
 	 */
-	private static  void convertField(Object event, Class<?> clazz, Field field,
-		GdbMiField fieldAnnotation, GdbMiResult result)
+	private static void convertField(Object event, Class<?> clazz, Field field,
+		GdbMiField fieldAnnotation, GdbMiResult result) throws InvocationTargetException,
+		IllegalAccessException
 	{
 		if (fieldAnnotation.valueType() != result.value.type)
 		{
@@ -126,7 +125,25 @@ public class GdbMiMessageConverter
 		else
 		{
 			// Field does not have a custom value processor; convert it manually
-			convertFieldManually(event, clazz, field, fieldAnnotation.valueType(), result);
+			ParameterizedType genericType = null;
+			{
+				Type basicGenericType = field.getGenericType();
+				if (basicGenericType instanceof ParameterizedType)
+				{
+					genericType = (ParameterizedType) basicGenericType;
+				}
+			}
+
+			Object value = convertFieldManually(field.getType(), genericType, result);
+			if (value != null)
+			{
+				field.set(event, value);
+			}
+			else
+			{
+				m_log.warn("No conversion rules were available to convert GDB/MI result '" +
+					result + "' for field " + field);
+			}
 		}
 	}
 
@@ -217,44 +234,31 @@ public class GdbMiMessageConverter
 	/**
 	 * Converts a GdbMiResult into a suitable Java type and puts it in the given field on the given
 	 * object using built-in value processors.
-	 * @param event The object to put the value into.
-	 * @param clazz The class of the object.
-	 * @param field The field on the object to put the value into.
-	 * @param valueType The expected GDB/MI value type for the field.
+	 * @param targetType The type of object to be created.
+	 * @param genericTargetType The generic type of the object to be created. May be null.
 	 * @param result The result to get the data from.
+	 * @return The new object, or null if it could not be created.
 	 */
-	private static void convertFieldManually(Object event, Class<?> clazz, Field field,
-		GdbMiValue.Type valueType, GdbMiResult result)
+	static Object convertFieldManually(Class<?> targetType, ParameterizedType genericTargetType,
+		GdbMiResult result) throws InvocationTargetException, IllegalAccessException
 	{
-		try
+		// Apply the conversion rules until we get a match
+		Object value = null;
+		Method[] methods = GdbMiValueConversionRules.class.getMethods();
+		for (Method method : methods)
 		{
-			// Apply the conversion rules until we get a match
-			Object value = null;
-			Method[] methods = GdbMiValueConversionRules.class.getMethods();
-			for (Method method : methods)
+			// Verify it is a conversion rule
+			if (method.getAnnotation(GdbMiConversionRule.class) == null)
 			{
-				value = method.invoke(null, field, valueType, result);
-				if (value != null)
-				{
-					break;
-				}
+				continue;
 			}
 
-			// Save the value if we got one
+			value = method.invoke(null, targetType, genericTargetType, result);
 			if (value != null)
 			{
-				field.set(event, value);
-			}
-			else
-			{
-				m_log.warn("No conversion rules were available to convert GDB/MI result '" +
-					result + "' for field " + field);
+				break;
 			}
 		}
-		catch (Throwable ex)
-		{
-			m_log.warn("An error occurred whilst converting GDB/MI result '" + result + "' for " +
-				"field " + field, ex);
-		}
+		return value;
 	}
 }
