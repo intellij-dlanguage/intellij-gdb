@@ -1,5 +1,8 @@
 package uk.co.cwspencer.gdb.messages;
 
+import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
+
 /**
  * Utility functions for use with the message converter.
  */
@@ -9,12 +12,12 @@ public class GdbMiMessageConverterUtils
 	/**
 	 * Converts a hexadecimal string to a long.
 	 */
-	public static Long hexStringToLong(String value)
+	public static Long hexStringToLong(GdbMiValue value)
 	{
 		Long longValue = null;
-		if (value.substring(0, 2).equals("0x"))
+		if (value.type == GdbMiValue.Type.String && value.string.substring(0, 2).equals("0x"))
 		{
-			longValue = Long.parseLong(value.substring(2), 16);
+			longValue = Long.parseLong(value.string.substring(2), 16);
 		}
 		return longValue;
 	}
@@ -22,8 +25,21 @@ public class GdbMiMessageConverterUtils
 	/**
 	 * Returns true if value is equal to "all".
 	 */
-	public static Boolean valueIsAll(String value)
+	public static Boolean valueIsAll(GdbMiValue value)
 	{
-		return value.equals("all");
+		return value.type == GdbMiValue.Type.String && value.string.equals("all");
+	}
+
+	/**
+	 * Returns null if value is equal to "all", or otherwise requests normal processing for the
+	 * value.
+	 */
+	public static Object passThroughIfNotAll(GdbMiValue value)
+	{
+		if (valueIsAll(value))
+		{
+			return null;
+		}
+		return GdbMiMessageConverter.ValueProcessorPassThrough;
 	}
 }

@@ -36,18 +36,4 @@ public class GdbConnectedEvent
 	@SuppressWarnings("unused")
 	@GdbMiField(name = "args", valueType = GdbMiValue.Type.List)
 	public Map<String, String> arguments;
-
-	/**
-	 * Value processor for address.
-	 */
-	@SuppressWarnings("unused")
-	public Long processAddress(String value)
-	{
-		Long address = null;
-		if (value.substring(0, 2).equals("0x"))
-		{
-			address = Long.parseLong(value.substring(2), 16);
-		}
-		return address;
-	}
 }

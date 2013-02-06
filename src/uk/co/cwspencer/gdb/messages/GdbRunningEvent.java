@@ -22,19 +22,7 @@ public class GdbRunningEvent
 	/**
 	 * The thread of execution. This will be null if allThreads is true.
 	 */
-	@GdbMiField(name = "thread-id", valueType = GdbMiValue.Type.String,
-		valueProcessor = "processThreadId")
+	@GdbMiField(name = "thread-id", valueType = GdbMiValue.Type.String, valueProcessor =
+		"uk.co.cwspencer.gdb.messages.GdbMiMessageConverterUtils.passThroughIfNotAll")
 	public Integer threadId;
-
-	/**
-	 * Value processor for threadId.
-	 */
-	public Integer processThreadId(String value)
-	{
-		if (value.equals("all"))
-		{
-			return null;
-		}
-		return Integer.parseInt(value);
-	}
 }

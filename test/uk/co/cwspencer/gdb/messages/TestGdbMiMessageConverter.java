@@ -97,6 +97,7 @@ public class TestGdbMiMessageConverter
 			"disp=\"keep\"," +
 			"bkptno=\"1\"," +
 			"thread-id=\"0\"," +
+			"stopped-threads=\"all\"," +
 			"frame={" +
 				"addr=\"0x08048564\"," +
 				"func=\"main\"," +
@@ -108,31 +109,50 @@ public class TestGdbMiMessageConverter
 				"file=\"myprog.c\"," +
 				"fullname=\"/home/nickrob/myprog.c\"," +
 				"line=\"68\"}\r\n" +
-				"(gdb)\r\n";
+			"*stopped,stopped-threads=[\"1\",\"2\"]\r\n" +
+			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 		GdbMiMessage message = parser.getMessages().get(0);
 
 		// Convert the message
-		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
-		Object object = GdbMiMessageConverter.processRecord(record);
-		Assert.assertNotNull(object);
-		Assert.assertTrue(object instanceof GdbStoppedEvent);
+		{
+			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+			Object object = GdbMiMessageConverter.processRecord(record);
+			Assert.assertNotNull(object);
+			Assert.assertTrue(object instanceof GdbStoppedEvent);
 
-		GdbStoppedEvent stoppedEvent = (GdbStoppedEvent) object;
-		Assert.assertEquals(GdbStoppedEvent.Reason.BreakpointHit, stoppedEvent.reason);
-		Assert.assertEquals(GdbStoppedEvent.BreakpointDisposition.Keep, stoppedEvent.breakpointDisposition);
-		Assert.assertEquals(new Integer(1), stoppedEvent.breakpointNumber);
-		Assert.assertEquals(new Integer(0), stoppedEvent.threadId);
+			GdbStoppedEvent stoppedEvent = (GdbStoppedEvent) object;
+			Assert.assertEquals(GdbStoppedEvent.Reason.BreakpointHit, stoppedEvent.reason);
+			Assert.assertEquals(GdbStoppedEvent.BreakpointDisposition.Keep,
+				stoppedEvent.breakpointDisposition);
+			Assert.assertEquals(new Integer(1), stoppedEvent.breakpointNumber);
+			Assert.assertEquals(new Integer(0), stoppedEvent.threadId);
+			Assert.assertEquals(true, stoppedEvent.allStopped);
+			Assert.assertNull(stoppedEvent.stoppedThreads);
 
-		Assert.assertEquals(new Long(0x08048564), stoppedEvent.frame.address);
-		Assert.assertEquals("main", stoppedEvent.frame.function);
-		Assert.assertEquals("myprog.c", stoppedEvent.frame.file);
-		Assert.assertEquals("/home/nickrob/myprog.c", stoppedEvent.frame.filePath);
-		Assert.assertEquals(new Integer(68), stoppedEvent.frame.line);
+			Assert.assertEquals(new Long(0x08048564), stoppedEvent.frame.address);
+			Assert.assertEquals("main", stoppedEvent.frame.function);
+			Assert.assertEquals("myprog.c", stoppedEvent.frame.file);
+			Assert.assertEquals("/home/nickrob/myprog.c", stoppedEvent.frame.filePath);
+			Assert.assertEquals(new Integer(68), stoppedEvent.frame.line);
 
-		Assert.assertEquals(2, stoppedEvent.frame.arguments.size());
-		Assert.assertEquals("1", stoppedEvent.frame.arguments.get("argc"));
-		Assert.assertEquals("0xbfc4d4d4", stoppedEvent.frame.arguments.get("argv"));
+			Assert.assertEquals(2, stoppedEvent.frame.arguments.size());
+			Assert.assertEquals("1", stoppedEvent.frame.arguments.get("argc"));
+			Assert.assertEquals("0xbfc4d4d4", stoppedEvent.frame.arguments.get("argv"));
+		}
+
+		{
+			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(1);
+			Object object = GdbMiMessageConverter.processRecord(record);
+			Assert.assertNotNull(object);
+			Assert.assertTrue(object instanceof GdbStoppedEvent);
+
+			GdbStoppedEvent stoppedEvent = (GdbStoppedEvent) object;
+			Assert.assertEquals(false, stoppedEvent.allStopped);
+			Assert.assertEquals(2, stoppedEvent.stoppedThreads.size());
+			Assert.assertEquals(new Integer(1), stoppedEvent.stoppedThreads.get(0));
+			Assert.assertEquals(new Integer(2), stoppedEvent.stoppedThreads.get(1));
+		}
 	}
 
 	/**
@@ -150,7 +170,7 @@ public class TestGdbMiMessageConverter
 		parser.process(messageStr.getBytes("US-ASCII"));
 		GdbMiMessage message = parser.getMessages().get(0);
 
-		// Convert the messages
+		// Convert the message
 		{
 			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
 			Object object = GdbMiMessageConverter.processRecord(record);
@@ -158,7 +178,7 @@ public class TestGdbMiMessageConverter
 			Assert.assertTrue(object instanceof GdbRunningEvent);
 
 			GdbRunningEvent runningEvent = (GdbRunningEvent) object;
-			Assert.assertEquals(new Boolean(false), runningEvent.allThreads);
+			Assert.assertEquals(false, runningEvent.allThreads);
 			Assert.assertEquals(new Integer(2), runningEvent.threadId);
 		}
 
@@ -169,7 +189,7 @@ public class TestGdbMiMessageConverter
 			Assert.assertTrue(object instanceof GdbRunningEvent);
 
 			GdbRunningEvent runningEvent = (GdbRunningEvent) object;
-			Assert.assertEquals(new Boolean(true), runningEvent.allThreads);
+			Assert.assertEquals(true, runningEvent.allThreads);
 			Assert.assertNull(runningEvent.threadId);
 		}
 	}

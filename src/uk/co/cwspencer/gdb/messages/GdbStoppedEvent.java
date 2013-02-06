@@ -6,6 +6,8 @@ import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
 
+import java.util.List;
+
 /**
  * Event fired when the target application stops.
  */
@@ -88,10 +90,16 @@ public class GdbStoppedEvent extends GdbEvent
 	 * Flag indicating whether all threads were stopped. If false, stoppedThreads contains a list of
 	 * the threads that were stopped.
 	 */
-	@GdbMiField(name = "stopped-threads", valueType = GdbMiValue.Type.String,
+	@GdbMiField(name = "stopped-threads",
+		valueType = { GdbMiValue.Type.String, GdbMiValue.Type.List },
 		valueProcessor = "uk.co.cwspencer.gdb.messages.GdbMiMessageConverterUtils.valueIsAll")
 	public Boolean allStopped;
 
-	// TODO
-	//public ?? stoppedThreads;
+	/**
+	 * A list of the threads that were stopped. This will be null if allStopped is true.
+	 */
+	@GdbMiField(name = "stopped-threads",
+		valueType = { GdbMiValue.Type.String, GdbMiValue.Type.List }, valueProcessor =
+		"uk.co.cwspencer.gdb.messages.GdbMiMessageConverterUtils.passThroughIfNotAll")
+	public List<Integer> stoppedThreads;
 }

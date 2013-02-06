@@ -24,6 +24,12 @@ public class GdbMiMessageConverter
 		Logger.getInstance("#uk.co.cwspencer.gdb.messages.GdbMiMessageConverter");
 
 	/**
+	 * Special value that can be returned by value processors to indicate that the normal automatic
+	 * processing should be applied to the value.
+	 */
+	public static final Object ValueProcessorPassThrough = new Object();
+
+	/**
 	 * Converts the given GDB/MI result record into a suitable Java object.
 	 * @param record The GDB result record.
 	 * @return The new object, or null if it could not be created.
@@ -124,7 +130,17 @@ public class GdbMiMessageConverter
 		GdbMiField fieldAnnotation, GdbMiResult result) throws InvocationTargetException,
 		IllegalAccessException
 	{
-		if (fieldAnnotation.valueType() != result.value.type)
+		// Check the result type is supported by the field
+		boolean foundValueType = false;
+		for (GdbMiValue.Type valueType : fieldAnnotation.valueType())
+		{
+			if (valueType == result.value.type)
+			{
+				foundValueType = true;
+				break;
+			}
+		}
+		if (!foundValueType)
 		{
 			m_log.warn("Annotation on " + field.getName() + " requires GDB/MI type " +
 				fieldAnnotation.valueType() + "; got " + result.value.type);
@@ -139,25 +155,7 @@ public class GdbMiMessageConverter
 		else
 		{
 			// Field does not have a custom value processor; convert it manually
-			ParameterizedType genericType = null;
-			{
-				Type basicGenericType = field.getGenericType();
-				if (basicGenericType instanceof ParameterizedType)
-				{
-					genericType = (ParameterizedType) basicGenericType;
-				}
-			}
-
-			Object value = convertFieldManually(field.getType(), genericType, result);
-			if (value != null)
-			{
-				field.set(event, value);
-			}
-			else
-			{
-				m_log.warn("No conversion rules were available to convert GDB/MI result '" +
-					result + "' for field " + field);
-			}
+			convertFieldManually(event, field, result);
 		}
 	}
 
@@ -171,19 +169,19 @@ public class GdbMiMessageConverter
 	 * @param result The result to get the data from.
 	 */
 	private static  void convertFieldUsingValueProcessor(Object event, Class<?> clazz, Field field,
-		GdbMiField fieldAnnotation, GdbMiResult result)
+		GdbMiField fieldAnnotation, GdbMiResult result) throws InvocationTargetException,
+		IllegalAccessException
 	{
 		// Get the value processor function
 		Method valueProcessor;
 		try
 		{
-			// TODO: Correct parameter type
 			String valueProcessorName = fieldAnnotation.valueProcessor();
 			int lastDotIndex = valueProcessorName.lastIndexOf('.');
 			if (lastDotIndex == -1)
 			{
 				// Value processor is a function on the parent class
-				valueProcessor = clazz.getMethod(valueProcessorName, String.class);
+				valueProcessor = clazz.getMethod(valueProcessorName, GdbMiValue.class);
 			}
 			else
 			{
@@ -192,7 +190,7 @@ public class GdbMiMessageConverter
 				String methodName = valueProcessorName.substring(lastDotIndex + 1);
 
 				Class<?> valueProcessorClass = Class.forName(className);
-				valueProcessor = valueProcessorClass.getMethod(methodName, String.class);
+				valueProcessor = valueProcessorClass.getMethod(methodName, GdbMiValue.class);
 			}
 		}
 		catch (NoSuchMethodException ex)
@@ -211,26 +209,10 @@ public class GdbMiMessageConverter
 
 		// Invoke the method
 		Object resultValue = null;
-		Object value = null;
+		Object value;
 		try
 		{
-			switch (result.value.type)
-			{
-			case String:
-				resultValue = result.value.string;
-				value = valueProcessor.invoke(event, result.value.string);
-				break;
-
-			case Tuple:
-				resultValue = result.value.tuple;
-				value = valueProcessor.invoke(event, result.value.tuple);
-				break;
-
-			case List:
-				resultValue = result.value.list;
-				value = valueProcessor.invoke(event, result.value.list);
-				break;
-			}
+			value = valueProcessor.invoke(event, result.value);
 		}
 		catch (Throwable ex)
 		{
@@ -242,6 +224,14 @@ public class GdbMiMessageConverter
 		// We don't need to do anything if the value processor returned null
 		if (value == null)
 		{
+			return;
+		}
+
+		// If the value processor returns the special value ValueProcessorPassThrough then we need
+		// to apply the default processing to the value
+		if (value == ValueProcessorPassThrough)
+		{
+			convertFieldManually(event, field, result);
 			return;
 		}
 
@@ -268,16 +258,47 @@ public class GdbMiMessageConverter
 	/**
 	 * Converts a GdbMiResult into a suitable Java type and puts it in the given field on the given
 	 * object using built-in value processors.
-	 * @param targetType The type of object to be created.
-	 * @param genericTargetType The generic type of the object to be created. May be null.
+	 * @param event The object to put the value into.
+	 * @param field The field on the object to put the value into.
 	 * @param result The result to get the data from.
 	 * @return The new object, or null if it could not be created.
 	 */
-	static Object convertFieldManually(Class<?> targetType, ParameterizedType genericTargetType,
-		GdbMiResult result) throws InvocationTargetException, IllegalAccessException
+	static void convertFieldManually(Object event, Field field, GdbMiResult result) throws
+		InvocationTargetException, IllegalAccessException
+	{
+		ParameterizedType genericType = null;
+		{
+			Type basicGenericType = field.getGenericType();
+			if (basicGenericType instanceof ParameterizedType)
+			{
+				genericType = (ParameterizedType) basicGenericType;
+			}
+		}
+
+		Object value = applyConversionRules(field.getType(), genericType, result.value);
+		if (value != null)
+		{
+			field.set(event, value);
+		}
+		else
+		{
+			m_log.warn("No conversion rules were available to convert GDB/MI result '" +
+				result + "' for field " + field);
+		}
+	}
+
+	/**
+	 * Applies the conversion rules to the given GDB/MI result and returns the converted object.
+	 * @param targetType The type of object to be created.
+	 * @param genericTargetType The generic type of the object to be created. May be null.
+	 * @param value The value to get the data from.
+	 * @return The new object, or null if it could not be created.
+	 */
+	static Object applyConversionRules(Class<?> targetType, ParameterizedType genericTargetType,
+		GdbMiValue value) throws InvocationTargetException, IllegalAccessException
 	{
 		// Apply the conversion rules until we get a match
-		Object value = null;
+		Object jValue = null;
 		Method[] methods = GdbMiValueConversionRules.class.getMethods();
 		for (Method method : methods)
 		{
@@ -287,12 +308,12 @@ public class GdbMiMessageConverter
 				continue;
 			}
 
-			value = method.invoke(null, targetType, genericTargetType, result);
-			if (value != null)
+			jValue = method.invoke(null, targetType, genericTargetType, value);
+			if (jValue != null)
 			{
 				break;
 			}
 		}
-		return value;
+		return jValue;
 	}
 }

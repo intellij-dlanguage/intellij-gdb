@@ -17,9 +17,9 @@ public @interface GdbMiField
 	String name();
 
 	/**
-	 * The type values take.
+	 * The supported GDB/MI value types.
 	 */
-	GdbMiValue.Type valueType();
+	GdbMiValue.Type[] valueType();
 
 	/**
 	 * Name of the function to use to convert the value from the GDB format to the variable format.
