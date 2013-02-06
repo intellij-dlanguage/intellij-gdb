@@ -1,4 +1,4 @@
-package uk.co.cwspencer.ideagdb.gdbmi;
+package uk.co.cwspencer.gdb.gdbmi;
 
 import java.util.List;
 

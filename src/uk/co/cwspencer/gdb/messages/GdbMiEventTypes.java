@@ -1,4 +1,4 @@
-package uk.co.cwspencer.ideagdb.debug.gdb.messages;
+package uk.co.cwspencer.gdb.messages;
 
 /**
  * Class which holds a reference to all the available GDB event type wrappers.

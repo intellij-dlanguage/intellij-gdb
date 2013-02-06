@@ -1,8 +1,8 @@
-package uk.co.cwspencer.ideagdb.debug.gdb.messages;
+package uk.co.cwspencer.gdb.messages;
 
-import uk.co.cwspencer.ideagdb.debug.gdb.messages.annotations.GdbMiField;
-import uk.co.cwspencer.ideagdb.debug.gdb.messages.annotations.GdbMiObject;
-import uk.co.cwspencer.ideagdb.gdbmi.GdbMiValue;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiObject;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
 
 /**
  * Class representing information about a stack frame from GDB.
@@ -27,6 +27,27 @@ public class GdbStackFrame
 
 	// TODO
 	//public ?? arguments;
+
+	/**
+	 * The name of the file being executed.
+	 */
+	@SuppressWarnings("unused")
+	@GdbMiField(name = "file", valueType = GdbMiValue.Type.String)
+	public String file;
+
+	/**
+	 * The full path to the file being executed.
+	 */
+	@SuppressWarnings("unused")
+	@GdbMiField(name = "fullname", valueType = GdbMiValue.Type.String)
+	public String filePath;
+
+	/**
+	 * The line number being executed.
+	 */
+	@SuppressWarnings("unused")
+	@GdbMiField(name = "line", valueType = GdbMiValue.Type.String)
+	public Integer line;
 
 	/**
 	 * Value processor for address.

@@ -1,6 +1,4 @@
-package uk.co.cwspencer.ideagdb.gdbmi;
-
-import java.nio.charset.Charset;
+package uk.co.cwspencer.gdb.gdbmi;
 
 /**
  * Utility functions relating to the use of GDB/MI.

@@ -1,4 +1,4 @@
-package uk.co.cwspencer.ideagdb.debug.gdb.messages;
+package uk.co.cwspencer.gdb.messages;
 
 /**
  * Base class that all GDB event types inherit from.

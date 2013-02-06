@@ -1,6 +1,6 @@
-package uk.co.cwspencer.ideagdb.debug.gdb.messages.annotations;
+package uk.co.cwspencer.gdb.messages.annotations;
 
-import uk.co.cwspencer.ideagdb.gdbmi.GdbMiRecord;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiRecord;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

@@ -5,7 +5,7 @@ import com.intellij.ui.SimpleColoredComponent;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.xdebugger.XDebuggerBundle;
 import com.intellij.xdebugger.frame.XStackFrame;
-import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbStackFrame;
+import uk.co.cwspencer.gdb.messages.GdbStackFrame;
 
 /**
  * Class for providing information about a stack frame.

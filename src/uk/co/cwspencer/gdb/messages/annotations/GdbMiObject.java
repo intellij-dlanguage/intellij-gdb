@@ -1,4 +1,4 @@
-package uk.co.cwspencer.ideagdb.debug.gdb.messages.annotations;
+package uk.co.cwspencer.gdb.messages.annotations;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

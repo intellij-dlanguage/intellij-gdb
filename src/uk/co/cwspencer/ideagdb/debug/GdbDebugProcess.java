@@ -1,23 +1,21 @@
 package uk.co.cwspencer.ideagdb.debug;
 
-import com.intellij.execution.ExecutionException;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.ui.ExecutionConsole;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import org.jetbrains.annotations.NotNull;
-import uk.co.cwspencer.ideagdb.debug.gdb.Gdb;
-import uk.co.cwspencer.ideagdb.debug.gdb.GdbListener;
-import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbEvent;
-import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbStopEvent;
+import uk.co.cwspencer.gdb.Gdb;
+import uk.co.cwspencer.gdb.GdbListener;
+import uk.co.cwspencer.gdb.messages.GdbEvent;
+import uk.co.cwspencer.gdb.messages.GdbStopEvent;
 import uk.co.cwspencer.ideagdb.facet.GdbFacet;
-import uk.co.cwspencer.ideagdb.gdbmi.GdbMiResultRecord;
-import uk.co.cwspencer.ideagdb.gdbmi.GdbMiStreamRecord;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
 import uk.co.cwspencer.ideagdb.run.GdbExecutionResult;
 
 import java.io.IOException;

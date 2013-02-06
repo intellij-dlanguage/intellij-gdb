@@ -1,4 +1,4 @@
-package uk.co.cwspencer.ideagdb.gdbmi;
+package uk.co.cwspencer.gdb.gdbmi;
 
 /**
  * Class representing a single result from a GDB/MI result record.

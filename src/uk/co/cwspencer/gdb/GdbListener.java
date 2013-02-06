@@ -1,8 +1,8 @@
-package uk.co.cwspencer.ideagdb.debug.gdb;
+package uk.co.cwspencer.gdb;
 
-import uk.co.cwspencer.ideagdb.debug.gdb.messages.GdbEvent;
-import uk.co.cwspencer.ideagdb.gdbmi.GdbMiResultRecord;
-import uk.co.cwspencer.ideagdb.gdbmi.GdbMiStreamRecord;
+import uk.co.cwspencer.gdb.messages.GdbEvent;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
 
 /**
  * Interface that users of the Gdb class must implement to receive events.
