@@ -5,6 +5,7 @@ import uk.co.cwspencer.gdb.gdbmi.GdbMiResult;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiConversionRule;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiDoneEvent;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiEvent;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
 
@@ -36,17 +37,33 @@ public class GdbMiMessageConverter
 	 */
 	public static Object processRecord(GdbMiResultRecord record)
 	{
+		return processRecord(record, null);
+	}
+
+	/**
+	 * Converts the given GDB/MI result record into a suitable Java object.
+	 * @param record The GDB result record.
+	 * @param commandType The original command type (excluding any parameters) that was sent which
+	 * caused GDB to send the record. This is used for mapping 'done' events to the appropriate
+	 * type.
+	 * @return The new object, or null if it could not be created.
+	 */
+	public static Object processRecord(GdbMiResultRecord record, String commandType)
+	{
+		// Iterate through the list of event types
 		Object event = null;
 		for (Class<?> clazz : GdbMiEventTypes.classes)
 		{
+			// Verify the type has a GdbMiEvent annotation
 			GdbMiEvent eventAnnotation = clazz.getAnnotation(GdbMiEvent.class);
 			if (eventAnnotation == null)
 			{
-				m_log.warn("Class " + clazz.getName() + " is in GdbMiEventTypes list but does " +
-					"not have GdbMiEvent annotation");
+				m_log.warn("Class " + clazz.getName() + " is in the GdbMiEventTypes.classes list " +
+					"but does not have a GdbMiEvent annotation");
 				continue;
 			}
 
+			// Check if this type is appropriate for the record
 			if (eventAnnotation.recordType() == record.type)
 			{
 				boolean match = false;
@@ -62,6 +79,32 @@ public class GdbMiMessageConverter
 				if (match)
 				{
 					// Found a matching event type wrapper
+
+					// If it is a 'done' event then search for a more specific event type
+					if (commandType != null && clazz.equals(GdbDoneEvent.class))
+					{
+						for (Class<?> doneEventClass : GdbMiEventTypes.doneEventTypes)
+						{
+							GdbMiDoneEvent doneEventAnnotation =
+								doneEventClass.getAnnotation(GdbMiDoneEvent.class);
+							if (doneEventAnnotation == null)
+							{
+								m_log.warn("Class " + doneEventClass.getName() + " is in the " +
+									"GdbMiEventTypes.doneEventTypes list but does not have a" +
+									"GdbMiDoneEvent annotation");
+								continue;
+							}
+
+							if (doneEventAnnotation.command().equals(commandType))
+							{
+								// Found a match; use this class instead
+								clazz = doneEventClass;
+								break;
+							}
+						}
+					}
+
+					// Process the object
 					event = processObject(clazz, record.results);
 					break;
 				}

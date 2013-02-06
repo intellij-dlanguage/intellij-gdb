@@ -132,8 +132,8 @@ public class TestGdbMiMessageConverter
 
 			Assert.assertEquals(new Long(0x08048564), stoppedEvent.frame.address);
 			Assert.assertEquals("main", stoppedEvent.frame.function);
-			Assert.assertEquals("myprog.c", stoppedEvent.frame.file);
-			Assert.assertEquals("/home/nickrob/myprog.c", stoppedEvent.frame.filePath);
+			Assert.assertEquals("myprog.c", stoppedEvent.frame.fileRelative);
+			Assert.assertEquals("/home/nickrob/myprog.c", stoppedEvent.frame.fileAbsolute);
 			Assert.assertEquals(new Integer(68), stoppedEvent.frame.line);
 
 			Assert.assertEquals(2, stoppedEvent.frame.arguments.size());
@@ -191,6 +191,67 @@ public class TestGdbMiMessageConverter
 			GdbRunningEvent runningEvent = (GdbRunningEvent) object;
 			Assert.assertEquals(true, runningEvent.allThreads);
 			Assert.assertNull(runningEvent.threadId);
+		}
+	}
+
+	/**
+	 * Verifies the correct conversion of a stack trace message.
+	 */
+	@Test
+	public void testStackTrace() throws UnsupportedEncodingException
+	{
+		// Parse the message
+		GdbMiParser parser = new GdbMiParser();
+		String messageStr =
+			"^done," +
+			"stack=[" +
+				"frame={" +
+					"level=\"0\"," +
+					"addr=\"0x00010734\"," +
+					"func=\"callee4\"," +
+					"file=\"../../../devo/gdb/testsuite/gdb.mi/basics.c\"," +
+					"fullname=\"/home/foo/bar/devo/gdb/testsuite/gdb.mi/basics.c\"," +
+					"line=\"8\"}," +
+				"frame={" +
+					"level=\"1\"," +
+					"addr=\"0x0001076c\"," +
+					"func=\"callee3\"," +
+					"file=\"../../../devo/gdb/testsuite/gdb.mi/basics.c\"," +
+					"fullname=\"/home/foo/bar/devo/gdb/testsuite/gdb.mi/basics.c\"," +
+					"line=\"17\"}]\r\n" +
+			"(gdb)\r\n";
+		parser.process(messageStr.getBytes("US-ASCII"));
+		GdbMiMessage message = parser.getMessages().get(0);
+
+		// Convert the message
+		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		Object object = GdbMiMessageConverter.processRecord(record, "-stack-list-frames");
+		Assert.assertNotNull(object);
+		Assert.assertTrue(object instanceof GdbStackTrace);
+
+		GdbStackTrace stackTrace = (GdbStackTrace) object;
+		Assert.assertEquals(2, stackTrace.stack.size());
+
+		{
+			GdbStackFrame frame = stackTrace.stack.get(0);
+			Assert.assertEquals(new Integer(0), frame.level);
+			Assert.assertEquals(new Long(0x00010734), frame.address);
+			Assert.assertEquals("callee4", frame.function);
+			Assert.assertEquals("../../../devo/gdb/testsuite/gdb.mi/basics.c", frame.fileRelative);
+			Assert.assertEquals("/home/foo/bar/devo/gdb/testsuite/gdb.mi/basics.c",
+				frame.fileAbsolute);
+			Assert.assertEquals(new Integer(8), frame.line);
+		}
+
+		{
+			GdbStackFrame frame = stackTrace.stack.get(1);
+			Assert.assertEquals(new Integer(1), frame.level);
+			Assert.assertEquals(new Long(0x0001076c), frame.address);
+			Assert.assertEquals("callee3", frame.function);
+			Assert.assertEquals("../../../devo/gdb/testsuite/gdb.mi/basics.c", frame.fileRelative);
+			Assert.assertEquals("/home/foo/bar/devo/gdb/testsuite/gdb.mi/basics.c",
+				frame.fileAbsolute);
+			Assert.assertEquals(new Integer(17), frame.line);
 		}
 	}
 }

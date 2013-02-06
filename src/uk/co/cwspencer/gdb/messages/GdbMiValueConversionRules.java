@@ -172,7 +172,7 @@ public class GdbMiValueConversionRules
 	}
 
 	/**
-	 * Converts a list values to a list.
+	 * Converts a list to a list. If it is a list of results then the variable name is discarded.
 	 */
 	@GdbMiConversionRule
 	public static Object convertListOfValuesToList(Class<?> type, ParameterizedType genericType,
@@ -181,12 +181,6 @@ public class GdbMiValueConversionRules
 		if (value.type != GdbMiValue.Type.List || genericType == null ||
 			!type.equals(List.class))
 		{
-			return null;
-		}
-
-		if (value.list.type == GdbMiList.Type.Results)
-		{
-			// Only value lists can be converted
 			return null;
 		}
 
@@ -207,15 +201,33 @@ public class GdbMiValueConversionRules
 		Class<?> listItemType = (Class<?>) listTypes[0];
 
 		// Process each value in the list
-		for (GdbMiValue subValue : value.list.values)
+		if (value.list.type == GdbMiList.Type.Values)
 		{
-			Object item = GdbMiMessageConverter.applyConversionRules(listItemType, null, subValue);
-			if (item == null)
+			for (GdbMiValue subValue : value.list.values)
 			{
-				return null;
+				Object item = GdbMiMessageConverter.applyConversionRules(listItemType, null,
+					subValue);
+				if (item == null)
+				{
+					return null;
+				}
+				list.add(item);
 			}
-			list.add(item);
 		}
+		else
+		{
+			for (GdbMiResult result : value.list.results)
+			{
+				Object item = GdbMiMessageConverter.applyConversionRules(listItemType, null,
+					result.value);
+				if (item == null)
+				{
+					return null;
+				}
+				list.add(item);
+			}
+		}
+
 		return list;
 	}
 

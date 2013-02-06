@@ -13,6 +13,13 @@ import java.util.Map;
 public class GdbStackFrame
 {
 	/**
+	 * The position of the frame within the stack, where zero is the top of the stack.
+	 */
+	@SuppressWarnings("unused")
+	@GdbMiField(name = "level", valueType = GdbMiValue.Type.String)
+	public Integer level;
+
+	/**
 	 * The execution address.
 	 */
 	@SuppressWarnings("unused")
@@ -35,18 +42,18 @@ public class GdbStackFrame
 	public Map<String, String> arguments;
 
 	/**
-	 * The name of the file being executed.
+	 * The relative path to the file being executed.
 	 */
 	@SuppressWarnings("unused")
 	@GdbMiField(name = "file", valueType = GdbMiValue.Type.String)
-	public String file;
+	public String fileRelative;
 
 	/**
-	 * The full path to the file being executed.
+	 * The absolute path to the file being executed.
 	 */
 	@SuppressWarnings("unused")
 	@GdbMiField(name = "fullname", valueType = GdbMiValue.Type.String)
-	public String filePath;
+	public String fileAbsolute;
 
 	/**
 	 * The line number being executed.
