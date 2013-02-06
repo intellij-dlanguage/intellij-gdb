@@ -9,5 +9,8 @@ public class GdbMiEventTypes
 	 * An array of the event classes.
 	 */
 	public static Class<?>[] classes = {
-		GdbStopEvent.class };
+		GdbConnectedEvent.class,
+		GdbErrorEvent.class,
+		GdbExitEvent.class,
+		GdbStoppedEvent.class };
 }

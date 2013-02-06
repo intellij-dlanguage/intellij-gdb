@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XStackFrame;
 import org.jetbrains.annotations.Nullable;
-import uk.co.cwspencer.gdb.messages.GdbStopEvent;
+import uk.co.cwspencer.gdb.messages.GdbStoppedEvent;
 
 public class GdbExecutionStack extends XExecutionStack
 {
@@ -18,7 +18,7 @@ public class GdbExecutionStack extends XExecutionStack
 	 * Constructor.
 	 * @param stopEvent The stop event.
 	 */
-	public GdbExecutionStack(GdbStopEvent stopEvent)
+	public GdbExecutionStack(GdbStoppedEvent stopEvent)
 	{
 		super("Stack");
 

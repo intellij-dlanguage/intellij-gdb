@@ -6,7 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Annotation applied to classes which represent fields in GDB/MI messages.
+ * Annotation applied to fields in classes which represent fields in GDB/MI messages.
  */
 @Retention(value = RetentionPolicy.RUNTIME)
 public @interface GdbMiField
@@ -22,8 +22,9 @@ public @interface GdbMiField
 	GdbMiValue.Type valueType();
 
 	/**
-	 * Name of the function in the class to use to convert the value from the GDB format to the
-	 * variable format.
+	 * Name of the function to use to convert the value from the GDB format to the variable format.
+	 * May be the name of a function on the parent class, or a fully-qualified name to a static
+	 * function.
 	 */
 	String valueProcessor() default "";
 }

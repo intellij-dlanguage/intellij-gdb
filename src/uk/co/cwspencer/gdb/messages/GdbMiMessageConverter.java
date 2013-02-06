@@ -164,14 +164,34 @@ public class GdbMiMessageConverter
 		try
 		{
 			// TODO: Correct parameter type
-			valueProcessor = clazz.getMethod(
-				fieldAnnotation.valueProcessor(), String.class);
+			String valueProcessorName = fieldAnnotation.valueProcessor();
+			int lastDotIndex = valueProcessorName.lastIndexOf('.');
+			if (lastDotIndex == -1)
+			{
+				// Value processor is a function on the parent class
+				valueProcessor = clazz.getMethod(valueProcessorName, String.class);
+			}
+			else
+			{
+				// Value processor is a fully-qualified name
+				String className = valueProcessorName.substring(0, lastDotIndex);
+				String methodName = valueProcessorName.substring(lastDotIndex + 1);
+
+				Class<?> valueProcessorClass = Class.forName(className);
+				valueProcessor = valueProcessorClass.getMethod(methodName, String.class);
+			}
 		}
 		catch (NoSuchMethodException ex)
 		{
 			m_log.warn("Annotation on " + field.getName() + " has value processor " +
 				fieldAnnotation.valueProcessor() + ", but no such function exists on the class " +
 				"(or it does not take the right arguments)", ex);
+			return;
+		}
+		catch (ClassNotFoundException ex)
+		{
+			m_log.warn("Annotation on " + field.getName() + " has value processor " +
+				fieldAnnotation.valueProcessor() + ", but the referenced class does not exist", ex);
 			return;
 		}
 

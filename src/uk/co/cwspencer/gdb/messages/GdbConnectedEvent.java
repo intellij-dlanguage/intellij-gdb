@@ -1,16 +1,19 @@
 package uk.co.cwspencer.gdb.messages;
 
-import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
-import uk.co.cwspencer.gdb.messages.annotations.GdbMiObject;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiEvent;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
 
+import java.util.EnumSet;
 import java.util.Map;
 
 /**
- * Class representing information about a stack frame from GDB.
+ * Event fired when GDB connects to a remote target.
  */
-@GdbMiObject
-public class GdbStackFrame
+@SuppressWarnings("unused")
+@GdbMiEvent(recordType = GdbMiRecord.Type.Immediate, className = "connected")
+public class GdbConnectedEvent
 {
 	/**
 	 * The execution address.
@@ -35,23 +38,16 @@ public class GdbStackFrame
 	public Map<String, String> arguments;
 
 	/**
-	 * The name of the file being executed.
+	 * Value processor for address.
 	 */
 	@SuppressWarnings("unused")
-	@GdbMiField(name = "file", valueType = GdbMiValue.Type.String)
-	public String file;
-
-	/**
-	 * The full path to the file being executed.
-	 */
-	@SuppressWarnings("unused")
-	@GdbMiField(name = "fullname", valueType = GdbMiValue.Type.String)
-	public String filePath;
-
-	/**
-	 * The line number being executed.
-	 */
-	@SuppressWarnings("unused")
-	@GdbMiField(name = "line", valueType = GdbMiValue.Type.String)
-	public Integer line;
+	public Long processAddress(String value)
+	{
+		Long address = null;
+		if (value.substring(0, 2).equals("0x"))
+		{
+			address = Long.parseLong(value.substring(2), 16);
+		}
+		return address;
+	}
 }

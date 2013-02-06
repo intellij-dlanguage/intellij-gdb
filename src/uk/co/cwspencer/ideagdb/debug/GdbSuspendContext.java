@@ -3,7 +3,7 @@ package uk.co.cwspencer.ideagdb.debug;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XSuspendContext;
 import org.jetbrains.annotations.Nullable;
-import uk.co.cwspencer.gdb.messages.GdbStopEvent;
+import uk.co.cwspencer.gdb.messages.GdbStoppedEvent;
 
 public class GdbSuspendContext extends XSuspendContext
 {
@@ -14,7 +14,7 @@ public class GdbSuspendContext extends XSuspendContext
 	 * Constructor.
 	 * @param stopEvent The stop event that caused the suspension.
 	 */
-	public GdbSuspendContext(GdbStopEvent stopEvent)
+	public GdbSuspendContext(GdbStoppedEvent stopEvent)
 	{
 		m_stack = new GdbExecutionStack(stopEvent);
 	}

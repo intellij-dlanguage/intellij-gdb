@@ -11,7 +11,7 @@ import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
  */
 @SuppressWarnings("unused")
 @GdbMiEvent(recordType = GdbMiRecord.Type.Exec, className = "stopped")
-public class GdbStopEvent extends GdbEvent
+public class GdbStoppedEvent extends GdbEvent
 {
 	/**
 	 * Possible reasons that can cause the program to stop.
