@@ -4,14 +4,11 @@ import com.intellij.openapi.diagnostic.Logger;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResult;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
-import uk.co.cwspencer.gdb.messages.annotations.GdbMiEnum;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiEvent;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
-import uk.co.cwspencer.gdb.messages.annotations.GdbMiObject;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -57,7 +54,7 @@ public class GdbMiMessageConverter
 	 * @param results The results from GDB.
 	 * @return The new object, or null if it could not be created.
 	 */
-	private static Object processObject(Class<?> clazz, List<GdbMiResult> results)
+	public static Object processObject(Class<?> clazz, List<GdbMiResult> results)
 	{
 		Object event;
 		try
@@ -231,131 +228,16 @@ public class GdbMiMessageConverter
 	{
 		try
 		{
-			// If the field type class has a GdbMiObject annotation then recursively process it
-			GdbMiObject objectAnnotation = field.getType().getAnnotation(GdbMiObject.class);
-			if (objectAnnotation != null)
+			// Apply the conversion rules until we get a match
+			Object value = null;
+			Method[] methods = GdbMiValueConversionRules.class.getMethods();
+			for (Method method : methods)
 			{
-				// Get the list of results
-				List<GdbMiResult> results = null;
-				switch (valueType)
-				{
-				case Tuple:
-					results = result.value.tuple;
-					break;
-
-				case List:
-					switch (result.value.list.type)
-					{
-					case Results:
-						results = result.value.list.results;
-						break;
-
-					case Empty:
-						results = new ArrayList<GdbMiResult>(0);
-						break;
-
-					case Values:
-						m_log.warn("Field " + field + " has a type with a GdbMiObject annotation " +
-							"and expects a list, but GDB returned a list of values rather than a " +
-							"list of results, so it cannot be processed");
-						return;
-					}
-					break;
-
-				case String:
-					m_log.warn("Field " + field + " has a type with a GdbMiObject annotation, " +
-						"but expects a string from GDB; it must be a list or tuple");
-					return;
-				}
-
-				// Process the field
-				field.set(event, processObject(field.getType(), results));
-				return;
-			}
-
-			// Check if the field type is an enum
-			if (field.getType().isEnum())
-			{
-				// Only strings can be converted
-				if (valueType != GdbMiValue.Type.String)
-				{
-					m_log.warn("Field " + field + " has an enum type but expects a " + valueType +
-						"; only strings can be converted to enums");
-					return;
-				}
-
-				// Check the enum has a GdbMiEnum annotation
-				GdbMiEnum enumAnnotation = field.getType().getAnnotation(GdbMiEnum.class);
-				if (enumAnnotation == null)
-				{
-					m_log.warn("Field " + field + " has enum type " + field.getType() + ", but " +
-						"the enum does not have a GdbMiEnum annotation");
-					return;
-				}
-
-				// Convert the GDB/MI string into an enum value name. Hyphens are stripped and the
-				// first letter of each word is capitalised
-				boolean capitalise = true;
-				StringBuilder sb = new StringBuilder();
-				for (int i = 0; i != result.value.string.length(); ++i)
-				{
-					char ch = result.value.string.charAt(i);
-					if (ch == '-')
-					{
-						capitalise = true;
-						continue;
-					}
-					if (capitalise)
-					{
-						capitalise = false;
-						ch = Character.toUpperCase(ch);
-					}
-					sb.append(ch);
-				}
-				String name = sb.toString();
-
-				// Search the enum
-				Enum value = null;
-				Enum[] enumConstants = (Enum[]) field.getType().getEnumConstants();
-				for (Enum enumValue : enumConstants)
-				{
-					if (enumValue.name().equals(name))
-					{
-						// Found it
-						value = enumValue;
-						break;
-					}
-				}
-
-				// Save the value if we got one
+				value = method.invoke(null, field, valueType, result);
 				if (value != null)
 				{
-					field.set(event, value);
+					break;
 				}
-				else
-				{
-					m_log.warn("Could not find an appropriate enum value for string '" +
-						result.value.string + "' for field " + field);
-				}
-				return;
-			}
-
-			// Determine how to convert the value based on the value type and the field type
-			Class<?> fieldType = field.getType();
-
-			Object value = null;
-			switch (valueType)
-			{
-			case String:
-				if (fieldType.equals(String.class))
-				{
-					value = result.value.string;
-				}
-				else if (fieldType.equals(Integer.class))
-				{
-					value = Integer.parseInt(result.value.string);
-				}
-				break;
 			}
 
 			// Save the value if we got one
@@ -365,19 +247,14 @@ public class GdbMiMessageConverter
 			}
 			else
 			{
-				m_log.warn("No built-in method available to convert value for field " + field +
-					" from " + valueType + " to " + fieldType.getName() + " and the field type " +
-					"does not have a GdbMiObject annotation");
+				m_log.warn("No conversion rules were available to convert GDB/MI result '" +
+					result + "' for field " + field);
 			}
 		}
-		catch (IllegalAccessException ex)
+		catch (Throwable ex)
 		{
-			m_log.warn("Failed to set value on field " + field, ex);
-		}
-		catch (NumberFormatException ex)
-		{
-			m_log.warn("Failed to convert String '" + result.value.string + "' to " +
-				"Integer for field " + field, ex);
+			m_log.warn("An error occurred whilst converting GDB/MI result '" + result + "' for " +
+				"field " + field, ex);
 		}
 	}
 }
