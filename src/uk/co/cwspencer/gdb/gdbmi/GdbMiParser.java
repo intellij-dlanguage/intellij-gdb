@@ -246,9 +246,19 @@ public class GdbMiParser
 					break;
 
 				case NewLine:
-					m_message.records.add(m_resultRecord);
-					m_resultRecord = null;
-					setState(FsmState.Idle);
+					{
+						boolean isExit = m_resultRecord.className.equals("exit");
+						m_message.records.add(m_resultRecord);
+						m_resultRecord = null;
+						if (isExit)
+						{
+							// 'exit' is a special case because it is not followed by a (gdb)
+							// terminator, so save the message immediately
+							m_messages.add(m_message);
+							m_message = new GdbMiMessage();
+						}
+						setState(FsmState.Idle);
+					}
 					break;
 
 				default:

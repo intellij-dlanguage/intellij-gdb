@@ -64,6 +64,26 @@ public class TestGdbMiMessageConverter
 	}
 
 	/**
+	 * Verifies the correct conversion of an 'exit' message.
+	 */
+	@Test
+	public void testExitEvent() throws UnsupportedEncodingException
+	{
+		// Parse the message
+		GdbMiParser parser = new GdbMiParser();
+		String messageStr =
+			"^exit\r\n";
+		parser.process(messageStr.getBytes("US-ASCII"));
+		GdbMiMessage message = parser.getMessages().get(0);
+
+		// Convert the message
+		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		Object object = GdbMiMessageConverter.processRecord(record);
+		Assert.assertNotNull(object);
+		Assert.assertTrue(object instanceof GdbExitEvent);
+	}
+
+	/**
 	 * Verifies the correct conversion of a 'stopped' message.
 	 */
 	@Test
