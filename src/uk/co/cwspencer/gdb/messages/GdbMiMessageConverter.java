@@ -106,7 +106,7 @@ public class GdbMiMessageConverter
 					}
 
 					// Process the object
-					event = processObject(clazz, record.results);
+					event = (GdbEvent) processObject(clazz, record.results);
 					break;
 				}
 
@@ -122,11 +122,11 @@ public class GdbMiMessageConverter
 	 * @param results The results from GDB.
 	 * @return The new object, or null if it could not be created.
 	 */
-	public static GdbEvent processObject(Class<?> clazz, List<GdbMiResult> results)
+	public static Object processObject(Class<?> clazz, List<GdbMiResult> results)
 	{
 		try
 		{
-			GdbEvent event = (GdbEvent) clazz.newInstance();
+			Object object = clazz.newInstance();
 
 			// Populate the fields with data from the result
 			Field[] fields = clazz.getFields();
@@ -147,12 +147,12 @@ public class GdbMiMessageConverter
 					}
 
 					// Found a matching field; convert the value
-					convertField(event, clazz, field, fieldAnnotation, result);
+					convertField(object, clazz, field, fieldAnnotation, result);
 					break;
 				}
 			}
 
-			return event;
+			return object;
 		}
 		catch (Throwable ex)
 		{

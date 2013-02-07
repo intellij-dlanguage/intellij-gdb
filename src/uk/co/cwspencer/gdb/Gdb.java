@@ -12,15 +12,43 @@ import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class for interacting with GDB.
  */
 public class Gdb
 {
-	private static final Logger m_log =
-		Logger.getInstance("#uk.co.cwspencer.gdb.Gdb");
+	private static final Logger m_log = Logger.getInstance("#uk.co.cwspencer.gdb.Gdb");
+
+	/**
+	 * Interface for callbacks for results from completed GDB commands.
+	 */
+	public interface GdbEventCallback
+	{
+		/**
+		 * Called when a response to the command is received.
+		 * @param event The event.
+		 */
+		public void onGdbCommandCompleted(GdbEvent event);
+	}
+
+	// Information about a command that has been sent but GDB hasn't yet responded to
+	private class PendingCommand
+	{
+		// The command that was sent, excluding any arguments
+		String commandType;
+		// The user provided callback; may be null
+		GdbEventCallback callback;
+
+		PendingCommand(String commandType, GdbEventCallback callback)
+		{
+			this.commandType = commandType;
+			this.callback = callback;
+		}
+	}
 
 	// Handle to the ASCII character set
 	private static Charset m_ascii = Charset.forName("US-ASCII");
@@ -39,6 +67,9 @@ public class Gdb
 
 	// Token which the next GDB command will be sent with
 	private long m_token = 1;
+
+	// Commands that have been sent to GDB and are awaiting a response
+	private final Map<Long, PendingCommand> m_pendingCommands = new HashMap<Long, PendingCommand>();
 
 	/**
 	 * Constructor; launches GDB.
@@ -67,6 +98,19 @@ public class Gdb
 	 */
 	public long sendCommand(String command) throws IOException
 	{
+		return sendCommand(command, null);
+	}
+
+	/**
+	 * Sends an arbitrary command to GDB and requests a completion callback.
+	 * @param command The command to send. This may be a normal CLI command or a GDB/MI command. It
+	 * should not contain any line breaks.
+	 * @param callback The callback function.
+	 * @return The token the command was sent with.
+	 */
+	public long sendCommand(String command, GdbEventCallback callback) throws IOException
+	{
+		// Construct the message
 		long token = m_token++;
 
 		StringBuilder sb = new StringBuilder();
@@ -74,6 +118,19 @@ public class Gdb
 		sb.append(command);
 		sb.append("\r\n");
 
+		// Get the command type
+		int separatorIndex = command.indexOf(' ');
+		String commandType = separatorIndex == -1 ? command : command.substring(0, separatorIndex);
+
+		// Save the callback now since it is possible otherwise that GDB would respond before we
+		// insert the item into the map
+		PendingCommand pendingCommand = new PendingCommand(commandType, callback);
+		synchronized (m_pendingCommands)
+		{
+			m_pendingCommands.put(token, pendingCommand);
+		}
+
+		// Send the message
 		byte[] message = sb.toString().getBytes(m_ascii);
 		m_process.getOutputStream().write(message);
 		m_process.getOutputStream().flush();
@@ -174,11 +231,31 @@ public class Gdb
 		// Notify the listener
 		m_listener.onResultRecordReceived(record);
 
+		// Find the pending command data
+		PendingCommand pendingCommand = null;
+		String commandType = null;
+		if (record.userToken != null)
+		{
+			synchronized (m_pendingCommands)
+			{
+				pendingCommand = m_pendingCommands.remove(record.userToken);
+			}
+			if (pendingCommand != null)
+			{
+				commandType = pendingCommand.commandType;
+			}
+		}
+
 		// Process the event into something more useful
-		GdbEvent event = GdbMiMessageConverter.processRecord(record);
+		GdbEvent event = GdbMiMessageConverter.processRecord(record, commandType);
 		if (event != null)
 		{
+			// Notify the listener
 			m_listener.onGdbEventReceived(event);
+			if (pendingCommand != null && pendingCommand.callback != null)
+			{
+				pendingCommand.callback.onGdbCommandCompleted(event);
+			}
 		}
 	}
 }

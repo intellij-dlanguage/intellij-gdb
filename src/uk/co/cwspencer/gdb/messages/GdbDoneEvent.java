@@ -8,6 +8,6 @@ import uk.co.cwspencer.gdb.messages.annotations.GdbMiEvent;
  */
 @SuppressWarnings("unused")
 @GdbMiEvent(recordType = GdbMiRecord.Type.Immediate, className = { "done", "running" })
-public class GdbDoneEvent
+public class GdbDoneEvent extends GdbEvent
 {
 }

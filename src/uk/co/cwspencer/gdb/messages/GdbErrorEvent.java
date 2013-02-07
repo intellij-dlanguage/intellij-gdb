@@ -10,7 +10,7 @@ import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
  */
 @SuppressWarnings("unused")
 @GdbMiEvent(recordType = GdbMiRecord.Type.Immediate, className = "error")
-public class GdbErrorEvent
+public class GdbErrorEvent extends GdbEvent
 {
 	/**
 	 * The error message.

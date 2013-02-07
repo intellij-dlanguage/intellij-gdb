@@ -144,7 +144,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	{
 		if (event instanceof GdbStoppedEvent)
 		{
-			getSession().positionReached(new GdbSuspendContext((GdbStoppedEvent) event));
+			getSession().positionReached(new GdbSuspendContext(m_gdb, (GdbStoppedEvent) event));
 		}
 	}
 
