@@ -174,6 +174,7 @@ public class GdbMiValueConversionRules
 	/**
 	 * Converts a list to a list. If it is a list of results then the variable name is discarded.
 	 */
+	@SuppressWarnings("unchecked")
 	@GdbMiConversionRule
 	public static Object convertListOfValuesToList(Class<?> type, ParameterizedType genericType,
 		GdbMiValue value) throws InvocationTargetException, IllegalAccessException
@@ -235,6 +236,7 @@ public class GdbMiValueConversionRules
 	 * Converts list of tuples to a map. The tuples must all have two elements each. The variable
 	 * names of the tuples are discarded.
 	 */
+	@SuppressWarnings("unchecked")
 	@GdbMiConversionRule
 	public static Object convertListOfTuplesToMap(Class<?> type, ParameterizedType genericType,
 		GdbMiValue value) throws InvocationTargetException, IllegalAccessException
