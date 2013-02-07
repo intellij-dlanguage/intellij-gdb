@@ -1,6 +1,7 @@
 package uk.co.cwspencer.gdb;
 
 import com.intellij.openapi.diagnostic.Logger;
+import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbMiMessageConverter;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiMessage;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiParser;
@@ -174,6 +175,10 @@ public class Gdb
 		m_listener.onResultRecordReceived(record);
 
 		// Process the event into something more useful
-		Object event = GdbMiMessageConverter.processRecord(record);
+		GdbEvent event = GdbMiMessageConverter.processRecord(record);
+		if (event != null)
+		{
+			m_listener.onGdbEventReceived(event);
+		}
 	}
 }

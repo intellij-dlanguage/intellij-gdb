@@ -14,6 +14,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -35,7 +36,7 @@ public class GdbMiMessageConverter
 	 * @param record The GDB result record.
 	 * @return The new object, or null if it could not be created.
 	 */
-	public static Object processRecord(GdbMiResultRecord record)
+	public static GdbEvent processRecord(GdbMiResultRecord record)
 	{
 		return processRecord(record, null);
 	}
@@ -48,10 +49,10 @@ public class GdbMiMessageConverter
 	 * type.
 	 * @return The new object, or null if it could not be created.
 	 */
-	public static Object processRecord(GdbMiResultRecord record, String commandType)
+	public static GdbEvent processRecord(GdbMiResultRecord record, String commandType)
 	{
 		// Iterate through the list of event types
-		Object event = null;
+		GdbEvent event = null;
 		for (Class<?> clazz : GdbMiEventTypes.classes)
 		{
 			// Verify the type has a GdbMiEvent annotation
@@ -121,11 +122,11 @@ public class GdbMiMessageConverter
 	 * @param results The results from GDB.
 	 * @return The new object, or null if it could not be created.
 	 */
-	public static Object processObject(Class<?> clazz, List<GdbMiResult> results)
+	public static GdbEvent processObject(Class<?> clazz, List<GdbMiResult> results)
 	{
 		try
 		{
-			Object event = clazz.newInstance();
+			GdbEvent event = (GdbEvent) clazz.newInstance();
 
 			// Populate the fields with data from the result
 			Field[] fields = clazz.getFields();
@@ -185,8 +186,8 @@ public class GdbMiMessageConverter
 		}
 		if (!foundValueType)
 		{
-			m_log.warn("Annotation on " + field.getName() + " requires GDB/MI type " +
-				fieldAnnotation.valueType() + "; got " + result.value.type);
+			m_log.warn("Annotation on " + field.getName() + " requires on of GDB/MI types " +
+				Arrays.toString(fieldAnnotation.valueType()) + "; got " + result.value.type);
 			return;
 		}
 
@@ -304,7 +305,6 @@ public class GdbMiMessageConverter
 	 * @param event The object to put the value into.
 	 * @param field The field on the object to put the value into.
 	 * @param result The result to get the data from.
-	 * @return The new object, or null if it could not be created.
 	 */
 	static void convertFieldManually(Object event, Field field, GdbMiResult result) throws
 		InvocationTargetException, IllegalAccessException
