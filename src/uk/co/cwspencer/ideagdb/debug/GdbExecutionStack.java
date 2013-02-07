@@ -93,7 +93,6 @@ public class GdbExecutionStack extends XExecutionStack
 	 */
 	private void onGdbStackTraceReady(GdbEvent event, XStackFrameContainer container)
 	{
-		m_log.warn("GDB stack: " + event);
 		if (event instanceof GdbErrorEvent)
 		{
 			container.errorOccurred(((GdbErrorEvent) event).message);

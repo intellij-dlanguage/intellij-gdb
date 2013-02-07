@@ -10,7 +10,7 @@ import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
  */
 @SuppressWarnings("unused")
 @GdbMiEvent(recordType = GdbMiRecord.Type.Exec, className = "running")
-public class GdbRunningEvent
+public class GdbRunningEvent extends GdbEvent
 {
 	/**
 	 * Flag indicating whether all threads are now running.

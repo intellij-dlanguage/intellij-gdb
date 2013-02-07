@@ -27,7 +27,8 @@ public class GdbConnectedEvent
 	 * The name of the function.
 	 */
 	@SuppressWarnings("unused")
-	@GdbMiField(name = "func", valueType = GdbMiValue.Type.String)
+	@GdbMiField(name = "func", valueType = GdbMiValue.Type.String, valueProcessor =
+		"uk.co.cwspencer.gdb.messages.GdbMiMessageConverterUtils.passThroughIfNotQQ")
 	public String function;
 
 	/**

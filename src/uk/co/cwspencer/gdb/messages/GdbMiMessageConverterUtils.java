@@ -42,4 +42,18 @@ public class GdbMiMessageConverterUtils
 		}
 		return GdbMiMessageConverter.ValueProcessorPassThrough;
 	}
+
+	/**
+	 * Returns null if value is equal to "??", or otherwise requests normal processing for the
+	 * value.
+	 */
+	public static Object passThroughIfNotQQ(GdbMiValue value)
+	{
+		if (value.type == GdbMiValue.Type.String && value.string.equals("??"))
+		{
+			return null;
+		}
+		return GdbMiMessageConverter.ValueProcessorPassThrough;
+	}
+
 }
