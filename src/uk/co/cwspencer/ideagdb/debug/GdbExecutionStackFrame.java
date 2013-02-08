@@ -72,11 +72,11 @@ public class GdbExecutionStackFrame extends XStackFrame
 		XSourcePosition sourcePosition = getSourcePosition();
 		if (m_frame.function != null)
 		{
-			component.append(m_frame.function + "():", SimpleTextAttributes.REGULAR_ATTRIBUTES);
+			component.append(m_frame.function + "()", SimpleTextAttributes.REGULAR_ATTRIBUTES);
 
 			if (sourcePosition != null)
 			{
-				component.append(Integer.toString(sourcePosition.getLine() + 1),
+				component.append(":" + (sourcePosition.getLine() + 1),
 					SimpleTextAttributes.REGULAR_ATTRIBUTES);
 
 				component.append(" (" + sourcePosition.getFile().getName() + ")",
@@ -84,8 +84,8 @@ public class GdbExecutionStackFrame extends XStackFrame
 			}
 			else
 			{
-				component.append("0x" + m_frame.address,
-					SimpleTextAttributes.REGULAR_ATTRIBUTES);
+				component.append(" (0x" + Long.toHexString(m_frame.address) + ")",
+					SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
 			}
 		}
 		else if (sourcePosition != null)
@@ -96,8 +96,9 @@ public class GdbExecutionStackFrame extends XStackFrame
 		}
 		else
 		{
-			component.append("0x" + m_frame.address + "()",
-				SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
+			String addressStr = "0x" + Long.toHexString(m_frame.address);
+			component.append(addressStr, SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
+			component.appendFixedTextFragmentWidth(addressStr.length());
 		}
 		component.setIcon(AllIcons.Debugger.StackFrame);
 	}
