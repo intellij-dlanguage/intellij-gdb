@@ -18,6 +18,7 @@ import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
 import uk.co.cwspencer.ideagdb.run.GdbExecutionResult;
 
+import java.io.File;
 import java.io.IOException;
 
 public class GdbDebugProcess extends XDebugProcess implements GdbListener
@@ -43,8 +44,12 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 		m_console = (ConsoleView) executionResult.getExecutionConsole();
 		m_facet = executionResult.getFacet();
 
+		// Get the working directory
+		// TODO: Make this an option on the facet
+		String workingDirectory = new File(m_facet.getConfiguration().APP_PATH).getParent();
+
 		// Launch GDB
-		m_gdb = new Gdb(m_facet.getConfiguration().GDB_PATH, this);
+		m_gdb = new Gdb(m_facet.getConfiguration().GDB_PATH, workingDirectory, this);
 	}
 
 	@NotNull

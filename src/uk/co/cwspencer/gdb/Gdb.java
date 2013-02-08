@@ -9,6 +9,7 @@ import uk.co.cwspencer.gdb.gdbmi.GdbMiRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -74,9 +75,10 @@ public class Gdb
 	/**
 	 * Constructor; launches GDB.
 	 * @param gdbPath The path to the GDB executable.
+	 * @param workingDirectory Working directory to launch the GDB process in. May be null.
 	 * @param listener Listener that is to receive GDB events.
 	 */
-	public Gdb(final String gdbPath, GdbListener listener)
+	public Gdb(final String gdbPath, final String workingDirectory, GdbListener listener)
 	{
 		m_listener = listener;
 		m_readThread = new Thread(new Runnable()
@@ -84,7 +86,7 @@ public class Gdb
 				@Override
 				public void run()
 				{
-					runGdb(gdbPath);
+					runGdb(gdbPath, workingDirectory);
 				}
 			});
 		m_readThread.start();
@@ -141,8 +143,9 @@ public class Gdb
 	/**
 	 * Launches the GDB process and starts listening for data.
 	 * @param gdbPath Path to the GDB executable.
+	 * @param workingDirectory Working directory to launch the GDB process in. May be null.
 	 */
-	private void runGdb(String gdbPath)
+	private void runGdb(String gdbPath, String workingDirectory)
 	{
 		try
 		{
@@ -150,7 +153,12 @@ public class Gdb
 			final String[] commandLine = {
 				gdbPath,
 				"--interpreter=mi2" };
-			m_process = Runtime.getRuntime().exec(commandLine);
+			File workingDirectoryFile = null;
+			if (workingDirectory != null)
+			{
+				workingDirectoryFile = new File(workingDirectory);
+			}
+			m_process = Runtime.getRuntime().exec(commandLine, null, workingDirectoryFile);
 
 			// Start listening for data
 			GdbMiParser parser = new GdbMiParser();
