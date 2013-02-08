@@ -131,13 +131,23 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 			for (String command : commandsArray)
 			{
 				long token = m_gdb.sendCommand(command);
-				m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
 			}
 		}
 		catch (IOException ex)
 		{
 			onGdbError(ex);
 		}
+	}
+
+	/**
+	 * Called whenever a command is sent to GDB.
+	 * @param command The command that was sent.
+	 * @param token The token the command was sent with.
+	 */
+	@Override
+	public void onGdbCommandSent(String command, long token)
+	{
+		m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
 	}
 
 	/**
@@ -180,7 +190,13 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 			break;
 
 		case Log:
-			m_log.info("GDB: " + record.message);
+			{
+				String message = record.message.trim();
+				if (!message.isEmpty())
+				{
+					m_log.warn("GDB: " + message);
+				}
+			}
 			break;
 		}
 	}

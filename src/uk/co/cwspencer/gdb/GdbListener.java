@@ -21,6 +21,13 @@ public interface GdbListener
 	void onGdbStarted();
 
 	/**
+	 * Called whenever a command is sent to GDB.
+	 * @param command The command that was sent.
+	 * @param token The token the command was sent with.
+	 */
+	void onGdbCommandSent(String command, long token);
+
+	/**
 	 * Called when an event is received from GDB.
 	 * @param event The event.
 	 */

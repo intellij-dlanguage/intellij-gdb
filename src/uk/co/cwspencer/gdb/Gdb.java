@@ -114,6 +114,7 @@ public class Gdb
 	{
 		// Construct the message
 		long token = m_token++;
+		m_listener.onGdbCommandSent(command, token);
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(token);
