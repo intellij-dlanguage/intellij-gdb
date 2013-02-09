@@ -89,40 +89,93 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 		return m_editorsProvider;
 	}
 
+	/**
+	 * Steps over the next line.
+	 */
 	@Override
 	public void startStepOver()
 	{
-		m_log.warn("startStepOver: stub");
+		try
+		{
+			m_gdb.sendCommand("-exec-next");
+		}
+		catch (IOException ex)
+		{
+			onGdbError(ex);
+		}
 	}
 
 	@Override
 	public void startPausing()
 	{
+		// TODO: GDB doesn't support handling commands when the target is running; we should use
+		// asynchronous mode if the target supports it. I'm not really sure how to deal with this on
+		// other targets (e.g., Windows)
 		m_log.warn("startPausing: stub");
 	}
 
+	/**
+	 * Steps into the next line.
+	 */
 	@Override
 	public void startStepInto()
 	{
-		m_log.warn("startStepInto: stub");
+		try
+		{
+			m_gdb.sendCommand("-exec-step");
+		}
+		catch (IOException ex)
+		{
+			onGdbError(ex);
+		}
 	}
 
+	/**
+	 * Steps out of the current function.
+	 */
 	@Override
 	public void startStepOut()
 	{
-		m_log.warn("startStepOut: stub");
+		try
+		{
+			m_gdb.sendCommand("-exec-finish");
+		}
+		catch (IOException ex)
+		{
+			onGdbError(ex);
+		}
 	}
 
+	/**
+	 * Stops program execution and exits GDB.
+	 */
 	@Override
 	public void stop()
 	{
-		m_log.warn("stop: stub");
+		try
+		{
+			m_gdb.sendCommand("-gdb-exit");
+		}
+		catch (IOException ex)
+		{
+			onGdbError(ex);
+		}
 	}
 
+	/**
+	 * Resumes program execution.
+	 */
 	@Override
 	public void resume()
 	{
-		m_log.warn("resume: stub");
+		try
+		{
+			m_gdb.sendCommand("-exec-continue --all");
+		}
+		catch (IOException ex)
+		{
+			onGdbError(ex);
+		}
 	}
 
 	@Override

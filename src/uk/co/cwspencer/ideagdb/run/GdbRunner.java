@@ -60,7 +60,6 @@ public class GdbRunner extends DefaultProgramRunner
 					return new GdbDebugProcess(session, (GdbExecutionResult) result);
 				}
 			});
-		debugSession.setPauseActionSupported(true);
 		return debugSession.getRunContentDescriptor();
 	}
 }
