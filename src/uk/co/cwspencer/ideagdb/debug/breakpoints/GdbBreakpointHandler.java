@@ -28,8 +28,8 @@ public class GdbBreakpointHandler extends
 	private GdbDebugProcess m_debugProcess;
 
 	// The breakpoints that have been set and their GDB breakpoint numbers
-	private BidirectionalMap<Integer, XLineBreakpoint<GdbBreakpointProperties>> m_breakpoints =
-		new BidirectionalMap<Integer, XLineBreakpoint<GdbBreakpointProperties>>();
+	private final BidirectionalMap<Integer, XLineBreakpoint<GdbBreakpointProperties>>
+		m_breakpoints = new BidirectionalMap<Integer, XLineBreakpoint<GdbBreakpointProperties>>();
 
 	public GdbBreakpointHandler(Gdb gdb, GdbDebugProcess debugProcess)
 	{
@@ -104,7 +104,10 @@ public class GdbBreakpointHandler extends
 			{
 				// Delete the breakpoint
 				m_gdb.sendCommand("-break-delete " + number);
-				m_breakpoints.remove(number);
+				synchronized (m_breakpoints)
+				{
+					m_breakpoints.remove(number);
+				}
 			}
 			else
 			{
@@ -125,7 +128,10 @@ public class GdbBreakpointHandler extends
 	 */
 	public XLineBreakpoint<GdbBreakpointProperties> findBreakpoint(int number)
 	{
-		return m_breakpoints.get(number);
+		synchronized (m_breakpoints)
+		{
+			return m_breakpoints.get(number);
+		}
 	}
 
 	/**
@@ -135,7 +141,12 @@ public class GdbBreakpointHandler extends
 	 */
 	public Integer findBreakpointNumber(XLineBreakpoint<GdbBreakpointProperties> breakpoint)
 	{
-		List<Integer> numbers = m_breakpoints.getKeysByValue(breakpoint);
+		List<Integer> numbers;
+		synchronized (m_breakpoints)
+		{
+			numbers = m_breakpoints.getKeysByValue(breakpoint);
+		}
+
 		if (numbers == null || numbers.isEmpty())
 		{
 			return null;
@@ -179,7 +190,11 @@ public class GdbBreakpointHandler extends
 			m_log.warn("No breakpoint number received from GDB after -break-insert request");
 			return;
 		}
-		m_breakpoints.put(gdbBreakpoint.number, breakpoint);
+
+		synchronized (m_breakpoints)
+		{
+			m_breakpoints.put(gdbBreakpoint.number, breakpoint);
+		}
 
 		// Mark the breakpoint as set
 		// TODO: Don't do this yet if the breakpoint is pending
