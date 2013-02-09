@@ -51,7 +51,7 @@ public class GdbExecutionStackFrame extends XStackFrame
 			return null;
 		}
 
-		return XDebuggerUtil.getInstance().createPosition(file, m_frame.line);
+		return XDebuggerUtil.getInstance().createPosition(file, m_frame.line - 1);
 	}
 
 	/**
