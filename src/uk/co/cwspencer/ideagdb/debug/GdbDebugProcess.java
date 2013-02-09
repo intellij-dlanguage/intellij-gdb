@@ -3,7 +3,14 @@ package uk.co.cwspencer.ideagdb.debug;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ConsoleViewContentType;
 import com.intellij.execution.ui.ExecutionConsole;
+import com.intellij.execution.ui.RunnerLayoutUi;
+import com.intellij.execution.ui.layout.PlaceInGrid;
+import com.intellij.icons.AllIcons;
+import com.intellij.openapi.actionSystem.ActionPlaces;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.DefaultActionGroup;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.ui.content.Content;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XSourcePosition;
@@ -26,8 +33,11 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.debug.GdbDebugProcess");
 
-	GdbDebuggerEditorsProvider m_editorsProvider = new GdbDebuggerEditorsProvider();
-	ConsoleView m_console;
+	private GdbDebuggerEditorsProvider m_editorsProvider = new GdbDebuggerEditorsProvider();
+	private ConsoleView m_console;
+
+	// The GDB console
+	private GdbConsoleView m_gdbConsole;
 
 	// The GDB facet
 	private GdbFacet m_facet;
@@ -50,6 +60,9 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 
 		// Launch GDB
 		m_gdb = new Gdb(m_facet.getConfiguration().GDB_PATH, workingDirectory, this);
+
+		// Create the GDB console
+		m_gdbConsole = new GdbConsoleView(m_gdb, m_facet.getModule().getProject());
 	}
 
 	@NotNull
@@ -109,6 +122,31 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	}
 
 	/**
+	 * Called when the debugger UI is created so we can add our own content.
+	 * @param ui The debugger UI.
+	 */
+	@Override
+	public void registerAdditionalContent(@NotNull RunnerLayoutUi ui)
+	{
+		Content gdbConsoleContent = ui.createContent("GdbConsoleContent",
+			m_gdbConsole.getComponent(), "GDB Console", AllIcons.Debugger.Console,
+			m_gdbConsole.getPreferredFocusableComponent());
+		gdbConsoleContent.setCloseable(false);
+
+		// Create the actions
+		final DefaultActionGroup consoleActions = new DefaultActionGroup();
+		AnAction[] actions = m_gdbConsole.getConsole().createConsoleActions();
+		for (AnAction action : actions)
+		{
+			consoleActions.add(action);
+		}
+		gdbConsoleContent.setActions(consoleActions, ActionPlaces.DEBUGGER_TOOLBAR,
+			m_gdbConsole.getConsole().getPreferredFocusableComponent());
+
+		ui.addContent(gdbConsoleContent, 2, PlaceInGrid.bottom, false);
+	}
+
+	/**
 	 * Called when a GDB error occurs.
 	 * @param ex The exception
 	 */
@@ -130,7 +168,11 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 			String[] commandsArray = m_facet.getConfiguration().STARTUP_COMMANDS.split("\\r?\\n");
 			for (String command : commandsArray)
 			{
-				long token = m_gdb.sendCommand(command);
+				command = command.trim();
+				if (!command.isEmpty())
+				{
+					m_gdb.sendCommand(command);
+				}
 			}
 		}
 		catch (IOException ex)
@@ -147,7 +189,8 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void onGdbCommandSent(String command, long token)
 	{
-		m_console.print(token + "> " + command + "\n", ConsoleViewContentType.USER_INPUT);
+		m_gdbConsole.getConsole().print(token + "> " + command + "\n",
+			ConsoleViewContentType.USER_INPUT);
 	}
 
 	/**
@@ -182,7 +225,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 				sb.append(" ");
 			}
 			sb.append(record.message);
-			m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
+			m_gdbConsole.getConsole().print(sb.toString(), ConsoleViewContentType.NORMAL_OUTPUT);
 			break;
 
 		case Target:
@@ -190,13 +233,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 			break;
 
 		case Log:
-			{
-				String message = record.message.trim();
-				if (!message.isEmpty())
-				{
-					m_log.warn("GDB: " + message);
-				}
-			}
+			m_gdbConsole.getConsole().print(record.message, ConsoleViewContentType.SYSTEM_OUTPUT);
 			break;
 		}
 	}
@@ -242,6 +279,6 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 
 		sb.append(record);
 		sb.append("\n");
-		m_console.print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
+		m_gdbConsole.getConsole().print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
 	}
 }
