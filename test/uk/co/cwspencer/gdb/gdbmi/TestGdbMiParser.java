@@ -22,16 +22,11 @@ public class TestGdbMiParser
 		String messageStr = "^error,msg=\"Undefined MI command: rubbish\"\r\n(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
-		List<GdbMiMessage> messages = parser.getMessages();
-		Assert.assertNotNull(messages);
-		Assert.assertEquals(messages.size(), 1);
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 1);
 
-		GdbMiMessage message = messages.get(0);
-		Assert.assertNotNull(message);
-		Assert.assertNotNull(message.records);
-		Assert.assertEquals(message.records.size(), 1);
-
-		GdbMiRecord record = message.records.get(0);
+		GdbMiRecord record = records.get(0);
 		Assert.assertNotNull(record);
 		Assert.assertNull(record.userToken);
 		Assert.assertEquals(record.type, GdbMiRecord.Type.Immediate);
@@ -72,13 +67,10 @@ public class TestGdbMiParser
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
-		List<GdbMiMessage> messages = parser.getMessages();
-		Assert.assertEquals(messages.size(), 1);
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertEquals(records.size(), 1);
 
-		GdbMiMessage message = messages.get(0);
-		Assert.assertEquals(message.records.size(), 1);
-
-		GdbMiRecord record = message.records.get(0);
+		GdbMiRecord record = records.get(0);
 		Assert.assertEquals(record.type, GdbMiRecord.Type.Immediate);
 
 		GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
@@ -196,21 +188,18 @@ public class TestGdbMiParser
 			String messageStr = "^running\r\n(gdb)\r\n";
 			parser.process(messageStr.getBytes("US-ASCII"));
 
-			List<GdbMiMessage> messages = parser.getMessages();
-			Assert.assertNotNull(messages);
-			Assert.assertEquals(messages.size(), 1);
+			List<GdbMiRecord> records = parser.getRecords();
+			Assert.assertNotNull(records);
+			Assert.assertEquals(records.size(), 1);
 
-			GdbMiMessage message = messages.get(0);
-			Assert.assertEquals(message.records.size(), 1);
-
-			GdbMiRecord record = message.records.get(0);
+			GdbMiRecord record = records.get(0);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Immediate);
 
 			GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
 			Assert.assertEquals(resultRecord.className, "running");
 			Assert.assertEquals(resultRecord.results.size(), 0);
 
-			messages.clear();
+			records.clear();
 		}
 
 		// Later...
@@ -235,14 +224,11 @@ public class TestGdbMiParser
 				"(gdb)\r\n";
 			parser.process(messageStr.getBytes("US-ASCII"));
 
-			List<GdbMiMessage> messages = parser.getMessages();
-			Assert.assertNotNull(messages);
-			Assert.assertEquals(messages.size(), 1);
+			List<GdbMiRecord> records = parser.getRecords();
+			Assert.assertNotNull(records);
+			Assert.assertEquals(records.size(), 1);
 
-			GdbMiMessage message = messages.get(0);
-			Assert.assertEquals(message.records.size(), 1);
-
-			GdbMiRecord record = message.records.get(0);
+			GdbMiRecord record = records.get(0);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
 
 			GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
@@ -380,7 +366,7 @@ public class TestGdbMiParser
 				}
 			}
 
-			messages.clear();
+			records.clear();
 		}
 
 		// Input: -exec-continue
@@ -388,21 +374,18 @@ public class TestGdbMiParser
 			String messageStr = "^running\r\n(gdb)\r\n";
 			parser.process(messageStr.getBytes("US-ASCII"));
 
-			List<GdbMiMessage> messages = parser.getMessages();
-			Assert.assertNotNull(messages);
-			Assert.assertEquals(messages.size(), 1);
+			List<GdbMiRecord> records = parser.getRecords();
+			Assert.assertNotNull(records);
+			Assert.assertEquals(records.size(), 1);
 
-			GdbMiMessage message = messages.get(0);
-			Assert.assertEquals(message.records.size(), 1);
-
-			GdbMiRecord record = message.records.get(0);
+			GdbMiRecord record = records.get(0);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Immediate);
 
 			GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
 			Assert.assertEquals(resultRecord.className, "running");
 			Assert.assertEquals(resultRecord.results.size(), 0);
 
-			messages.clear();
+			records.clear();
 		}
 
 		// Later...
@@ -410,14 +393,11 @@ public class TestGdbMiParser
 			String messageStr = "*stopped,reason=\"exited-normally\"\r\n(gdb)\r\n";
 			parser.process(messageStr.getBytes("US-ASCII"));
 
-			List<GdbMiMessage> messages = parser.getMessages();
-			Assert.assertNotNull(messages);
-			Assert.assertEquals(messages.size(), 1);
+			List<GdbMiRecord> records = parser.getRecords();
+			Assert.assertNotNull(records);
+			Assert.assertEquals(records.size(), 1);
 
-			GdbMiMessage message = messages.get(0);
-			Assert.assertEquals(message.records.size(), 1);
-
-			GdbMiRecord record = message.records.get(0);
+			GdbMiRecord record = records.get(0);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
 
 			GdbMiResultRecord resultRecord = (GdbMiResultRecord) record;
@@ -429,7 +409,7 @@ public class TestGdbMiParser
 			Assert.assertEquals(result.value.type, GdbMiValue.Type.String);
 			Assert.assertEquals(result.value.string, "exited-normally");
 
-			messages.clear();
+			records.clear();
 		}
 	}
 
@@ -444,16 +424,11 @@ public class TestGdbMiParser
 		String messageStr = "12345^done\r\n(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
-		List<GdbMiMessage> messages = parser.getMessages();
-		Assert.assertNotNull(messages);
-		Assert.assertEquals(messages.size(), 1);
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 1);
 
-		GdbMiMessage message = messages.get(0);
-		Assert.assertNotNull(message);
-		Assert.assertNotNull(message.records);
-		Assert.assertEquals(message.records.size(), 1);
-
-		GdbMiRecord record = message.records.get(0);
+		GdbMiRecord record = records.get(0);
 		Assert.assertNotNull(record);
 		Assert.assertEquals(record.userToken, new Long(12345));
 		Assert.assertEquals(record.type, GdbMiRecord.Type.Immediate);
@@ -476,16 +451,11 @@ public class TestGdbMiParser
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
-		List<GdbMiMessage> messages = parser.getMessages();
-		Assert.assertNotNull(messages);
-		Assert.assertEquals(messages.size(), 1);
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 1);
 
-		GdbMiMessage message = messages.get(0);
-		Assert.assertNotNull(message);
-		Assert.assertNotNull(message.records);
-		Assert.assertEquals(message.records.size(), 1);
-
-		GdbMiRecord record = message.records.get(0);
+		GdbMiRecord record = records.get(0);
 		Assert.assertNotNull(record);
 		Assert.assertNull(record.userToken);
 		Assert.assertEquals(record.type, GdbMiRecord.Type.Console);
@@ -509,17 +479,12 @@ public class TestGdbMiParser
 			"(gdb)\r";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
-		List<GdbMiMessage> messages = parser.getMessages();
-		Assert.assertNotNull(messages);
-		Assert.assertEquals(messages.size(), 1);
-
-		GdbMiMessage message = messages.get(0);
-		Assert.assertNotNull(message);
-		Assert.assertNotNull(message.records);
-		Assert.assertEquals(message.records.size(), 2);
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 2);
 
 		{
-			GdbMiRecord record = message.records.get(0);
+			GdbMiRecord record = records.get(0);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Console);
@@ -529,7 +494,7 @@ public class TestGdbMiParser
 		}
 
 		{
-			GdbMiRecord record = message.records.get(1);
+			GdbMiRecord record = records.get(1);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Console);
@@ -555,18 +520,13 @@ public class TestGdbMiParser
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
-		List<GdbMiMessage> messages = parser.getMessages();
-		Assert.assertNotNull(messages);
-		Assert.assertEquals(messages.size(), 1);
-
-		GdbMiMessage message = messages.get(0);
-		Assert.assertNotNull(message);
-		Assert.assertNotNull(message.records);
-		Assert.assertEquals(message.records.size(), 5);
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 5);
 
 		// *stopped,test={}
 		{
-			GdbMiRecord record = message.records.get(0);
+			GdbMiRecord record = records.get(0);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
@@ -583,7 +543,7 @@ public class TestGdbMiParser
 
 		// *stopped,test=[]
 		{
-			GdbMiRecord record = message.records.get(1);
+			GdbMiRecord record = records.get(1);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
@@ -602,7 +562,7 @@ public class TestGdbMiParser
 
 		// *stopped,test={foo=[],bar="baz"}
 		{
-			GdbMiRecord record = message.records.get(2);
+			GdbMiRecord record = records.get(2);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
@@ -635,7 +595,7 @@ public class TestGdbMiParser
 
 		// *stopped,test=[{},"foo",[blar="fred"]]
 		{
-			GdbMiRecord record = message.records.get(3);
+			GdbMiRecord record = records.get(3);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
@@ -679,7 +639,7 @@ public class TestGdbMiParser
 
 		// *stopped,test=[foo={},bar="baz"]
 		{
-			GdbMiRecord record = message.records.get(4);
+			GdbMiRecord record = records.get(4);
 			Assert.assertNotNull(record);
 			Assert.assertNull(record.userToken);
 			Assert.assertEquals(record.type, GdbMiRecord.Type.Exec);
@@ -709,5 +669,37 @@ public class TestGdbMiParser
 				Assert.assertEquals(item.value.string, "baz");
 			}
 		}
+	}
+
+	/**
+	 * Tests the correct handling of messages when there is no "(gdb)" suffix. This can happen in
+	 * asynchronous execution mode.
+	 */
+	@Test
+	public void testMissingGdbSuffix() throws UnsupportedEncodingException
+	{
+		GdbMiParser parser = new GdbMiParser();
+		String messageStr =
+			"*stopped," +
+			"reason=\"breakpoint-hit\"," +
+			"disp=\"keep\"," +
+			"bkptno=\"1\"," +
+			"frame={" +
+				"addr=\"0xadbde4e3\"," +
+				"func=\"Java_uk_co_cwspencer_ideandktest_IdeaNdkTestJni_doSomething\"," +
+				"args=[]," +
+				"file=\"E:/Projects/Android/IdeaNdkTest/jni/idea_ndk_test_jni.cpp\"," +
+				"fullname=\"E:/Projects/Android/IdeaNdkTest/jni/idea_ndk_test_jni.cpp\"," +
+				"line=\"5\"}," +
+			"thread-id=\"1\"," +
+			"stopped-threads=\"all\"\r\n" +
+			// Later...
+			"23^error,msg=\"Undefined MI command: blar\"\r\n" +
+			"(gdb) \r\n";
+		parser.process(messageStr.getBytes("US-ASCII"));
+
+		List<GdbMiRecord> records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 2);
 	}
 }

@@ -3,7 +3,6 @@ package uk.co.cwspencer.gdb;
 import com.intellij.openapi.diagnostic.Logger;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbMiMessageConverter;
-import uk.co.cwspencer.gdb.gdbmi.GdbMiMessage;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiParser;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
@@ -63,8 +62,8 @@ public class Gdb
 	// Thread which reads data from GDB
 	private Thread m_readThread;
 
-	// Flag indicating whether we have received the first message from GDB yet
-	private boolean m_firstMessage = true;
+	// Flag indicating whether we have received the first record from GDB yet
+	private boolean m_firstRecord = true;
 
 	// Token which the next GDB command will be sent with
 	private long m_token = 1;
@@ -171,13 +170,13 @@ public class Gdb
 				// Process the data
 				parser.process(buffer, bytes);
 
-				// Handle the messages
-				List<GdbMiMessage> messages = parser.getMessages();
-				for (GdbMiMessage message : messages)
+				// Handle the records
+				List<GdbMiRecord> records = parser.getRecords();
+				for (GdbMiRecord record : records)
 				{
-					handleMessage(message);
+					handleRecord(record);
 				}
-				messages.clear();
+				records.clear();
 			}
 		}
 		catch (Throwable ex)
@@ -187,36 +186,32 @@ public class Gdb
 	}
 
 	/**
-	 * Handles the given GDB/MI message.
-	 * @param message The message.
+	 * Handles the given GDB/MI record.
+	 * @param record The record.
 	 */
-	private void handleMessage(GdbMiMessage message)
+	private void handleRecord(GdbMiRecord record)
 	{
-		for (GdbMiRecord record : message.records)
+		switch (record.type)
 		{
-			// Handle the record
-			switch (record.type)
-			{
-			case Target:
-			case Console:
-			case Log:
-				handleStreamRecord((GdbMiStreamRecord) record);
-				break;
+		case Target:
+		case Console:
+		case Log:
+			handleStreamRecord((GdbMiStreamRecord) record);
+			break;
 
-			case Immediate:
-			case Exec:
-			case Notify:
-			case Status:
-				handleResultRecord((GdbMiResultRecord) record);
-				break;
-			}
+		case Immediate:
+		case Exec:
+		case Notify:
+		case Status:
+			handleResultRecord((GdbMiResultRecord) record);
+			break;
 		}
 
-		// If this is the first message we have received we know we are fully started, so notify the
+		// If this is the first record we have received we know we are fully started, so notify the
 		// listener
-		if (m_firstMessage)
+		if (m_firstRecord)
 		{
-			m_firstMessage = false;
+			m_firstRecord = false;
 			m_listener.onGdbStarted();
 		}
 	}

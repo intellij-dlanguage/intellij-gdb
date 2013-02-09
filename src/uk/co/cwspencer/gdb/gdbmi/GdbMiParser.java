@@ -41,25 +41,24 @@ public class GdbMiParser
 	// Lexer
 	private GdbMiLexer m_lexer = new GdbMiLexer();
 
-	// Partially processed message
-	private GdbMiMessage m_message = new GdbMiMessage();
+	// Partially processed record
 	private GdbMiResultRecord m_resultRecord;
 	private GdbMiStreamRecord m_streamRecord;
 	private Stack<GdbMiValue> m_valueStack = new Stack<GdbMiValue>();
 	private Long m_userToken;
 	private StringBuilder m_sb;
 
-	// List of unprocessed messages
-	private List<GdbMiMessage> m_messages = new ArrayList<GdbMiMessage>();
+	// List of unprocessed records
+	private List<GdbMiRecord> m_records = new ArrayList<GdbMiRecord>();
 
 	/**
-	 * Returns a list of unprocessed messages. The caller should erase items from this list as they
+	 * Returns a list of unprocessed records. The caller should erase items from this list as they
 	 * are processed.
-	 * @return A list of unprocessed messages.
+	 * @return A list of unprocessed records.
 	 */
-	public List<GdbMiMessage> getMessages()
+	public List<GdbMiRecord> getRecords()
 	{
-		return m_messages;
+		return m_records;
 	}
 
 	/**
@@ -246,19 +245,9 @@ public class GdbMiParser
 					break;
 
 				case NewLine:
-					{
-						boolean isExit = m_resultRecord.className.equals("exit");
-						m_message.records.add(m_resultRecord);
-						m_resultRecord = null;
-						if (isExit)
-						{
-							// 'exit' is a special case because it is not followed by a (gdb)
-							// terminator, so save the message immediately
-							m_messages.add(m_message);
-							m_message = new GdbMiMessage();
-						}
-						setState(FsmState.Idle);
-					}
+					m_records.add(m_resultRecord);
+					m_resultRecord = null;
+					setState(FsmState.Idle);
 					break;
 
 				default:
@@ -751,7 +740,7 @@ public class GdbMiParser
 				switch (token.type)
 				{
 				case NewLine:
-					m_message.records.add(m_streamRecord);
+					m_records.add(m_streamRecord);
 					m_streamRecord = null;
 					setState(FsmState.Idle);
 					break;
@@ -767,8 +756,6 @@ public class GdbMiParser
 				switch (token.type)
 				{
 				case NewLine:
-					m_messages.add(m_message);
-					m_message = new GdbMiMessage();
 					setState(FsmState.Idle);
 					break;
 

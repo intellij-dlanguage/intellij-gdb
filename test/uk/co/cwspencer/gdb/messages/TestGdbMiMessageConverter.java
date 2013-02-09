@@ -2,11 +2,12 @@ package uk.co.cwspencer.gdb.messages;
 
 import org.junit.Assert;
 import org.junit.Test;
-import uk.co.cwspencer.gdb.gdbmi.GdbMiMessage;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiParser;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 /**
  * Tests for GdbMiMessageConverter.
@@ -23,12 +24,12 @@ public class TestGdbMiMessageConverter
 		GdbMiParser parser = new GdbMiParser();
 		String messageStr =
 			"^connected,addr=\"0xfe00a300\",func=\"??\",args=[]\r\n" +
-				"(gdb)\r\n";
+			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
-		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 		Object object = GdbMiMessageConverter.processRecord(record);
 		Assert.assertNotNull(object);
 		Assert.assertTrue(object instanceof GdbConnectedEvent);
@@ -51,10 +52,10 @@ public class TestGdbMiMessageConverter
 			"^error,msg=\"mi_cmd_exec_interrupt: Inferior not executing.\"\r\n" +
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
-		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 		Object object = GdbMiMessageConverter.processRecord(record);
 		Assert.assertNotNull(object);
 		Assert.assertTrue(object instanceof GdbErrorEvent);
@@ -74,10 +75,10 @@ public class TestGdbMiMessageConverter
 		String messageStr =
 			"^exit\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
-		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 		Object object = GdbMiMessageConverter.processRecord(record);
 		Assert.assertNotNull(object);
 		Assert.assertTrue(object instanceof GdbExitEvent);
@@ -112,11 +113,11 @@ public class TestGdbMiMessageConverter
 			"*stopped,stopped-threads=[\"1\",\"2\"]\r\n" +
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
 		{
-			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+			GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 			Object object = GdbMiMessageConverter.processRecord(record);
 			Assert.assertNotNull(object);
 			Assert.assertTrue(object instanceof GdbStoppedEvent);
@@ -142,7 +143,7 @@ public class TestGdbMiMessageConverter
 		}
 
 		{
-			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(1);
+			GdbMiResultRecord record = (GdbMiResultRecord) records.get(1);
 			Object object = GdbMiMessageConverter.processRecord(record);
 			Assert.assertNotNull(object);
 			Assert.assertTrue(object instanceof GdbStoppedEvent);
@@ -168,11 +169,11 @@ public class TestGdbMiMessageConverter
 			"*running,thread-id=\"all\"\r\n" +
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
 		{
-			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+			GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 			Object object = GdbMiMessageConverter.processRecord(record);
 			Assert.assertNotNull(object);
 			Assert.assertTrue(object instanceof GdbRunningEvent);
@@ -183,7 +184,7 @@ public class TestGdbMiMessageConverter
 		}
 
 		{
-			GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(1);
+			GdbMiResultRecord record = (GdbMiResultRecord) records.get(1);
 			Object object = GdbMiMessageConverter.processRecord(record);
 			Assert.assertNotNull(object);
 			Assert.assertTrue(object instanceof GdbRunningEvent);
@@ -221,10 +222,10 @@ public class TestGdbMiMessageConverter
 					"line=\"17\"}]\r\n" +
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
-		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 		Object object = GdbMiMessageConverter.processRecord(record, "-stack-list-frames");
 		Assert.assertNotNull(object);
 		Assert.assertTrue(object instanceof GdbStackTrace);
@@ -279,10 +280,10 @@ public class TestGdbMiMessageConverter
 				"times=\"0\"}\r\n" +
 			"(gdb)\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
-		GdbMiMessage message = parser.getMessages().get(0);
+		List<GdbMiRecord> records = parser.getRecords();
 
 		// Convert the message
-		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		GdbMiResultRecord record = (GdbMiResultRecord) records.get(0);
 		Object object = GdbMiMessageConverter.processRecord(record, "-break-insert");
 		Assert.assertNotNull(object);
 		Assert.assertTrue(object instanceof GdbBreakpoint);
