@@ -692,14 +692,23 @@ public class TestGdbMiParser
 				"fullname=\"E:/Projects/Android/IdeaNdkTest/jni/idea_ndk_test_jni.cpp\"," +
 				"line=\"5\"}," +
 			"thread-id=\"1\"," +
-			"stopped-threads=\"all\"\r\n" +
-			// Later...
-			"23^error,msg=\"Undefined MI command: blar\"\r\n" +
-			"(gdb) \r\n";
+			"stopped-threads=\"all\"\r\n";
 		parser.process(messageStr.getBytes("US-ASCII"));
 
 		List<GdbMiRecord> records = parser.getRecords();
 		Assert.assertNotNull(records);
-		Assert.assertEquals(records.size(), 2);
+		Assert.assertEquals(records.size(), 1);
+		records.clear();
+
+		// Later...
+		messageStr =
+			"23^error,msg=\"Undefined MI command: blar\"\r\n" +
+			"(gdb) \r\n";
+		parser.process(messageStr.getBytes("US-ASCII"));
+
+		records = parser.getRecords();
+		Assert.assertNotNull(records);
+		Assert.assertEquals(records.size(), 1);
+		records.clear();
 	}
 }
