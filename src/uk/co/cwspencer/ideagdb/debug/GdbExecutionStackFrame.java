@@ -93,18 +93,25 @@ public class GdbExecutionStackFrame extends XStackFrame
 		XSourcePosition sourcePosition = getSourcePosition();
 		if (m_frame.function != null)
 		{
-			component.append(m_frame.function + "()", SimpleTextAttributes.REGULAR_ATTRIBUTES);
+			// Strip any arguments from the function name
+			String function = m_frame.function;
+			int parenIndex = function.indexOf('(');
+			if (parenIndex != -1)
+			{
+				function = function.substring(0, parenIndex);
+			}
 
 			if (sourcePosition != null)
 			{
-				component.append(":" + (sourcePosition.getLine() + 1),
+				component.append(function + "():" + (sourcePosition.getLine() + 1),
 					SimpleTextAttributes.REGULAR_ATTRIBUTES);
-
 				component.append(" (" + sourcePosition.getFile().getName() + ")",
 					SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
 			}
 			else
 			{
+
+				component.append(function + "()", SimpleTextAttributes.GRAY_ATTRIBUTES);
 				component.append(" (0x" + Long.toHexString(m_frame.address) + ")",
 					SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
 			}
