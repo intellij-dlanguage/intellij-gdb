@@ -2,6 +2,7 @@ package uk.co.cwspencer.ideagdb.debug.breakpoints;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.util.containers.BidirectionalMap;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.breakpoints.XBreakpointHandler;
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint;
@@ -14,6 +15,7 @@ import uk.co.cwspencer.ideagdb.debug.GdbDebugProcess;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class GdbBreakpointHandler extends
@@ -26,8 +28,8 @@ public class GdbBreakpointHandler extends
 	private GdbDebugProcess m_debugProcess;
 
 	// The breakpoints that have been set and their GDB breakpoint numbers
-	private Map<Integer, XLineBreakpoint<GdbBreakpointProperties>> m_breakpoints =
-		new HashMap<Integer, XLineBreakpoint<GdbBreakpointProperties>>();
+	private BidirectionalMap<Integer, XLineBreakpoint<GdbBreakpointProperties>> m_breakpoints =
+		new BidirectionalMap<Integer, XLineBreakpoint<GdbBreakpointProperties>>();
 
 	public GdbBreakpointHandler(Gdb gdb, GdbDebugProcess debugProcess)
 	{
@@ -48,17 +50,29 @@ public class GdbBreakpointHandler extends
 		{
 			// TODO: I think we can use tracepoints here if the suspend policy isn't to stop the
 			// process
-			XSourcePosition sourcePosition = breakpoint.getSourcePosition();
-			String command = "-break-insert -f " + sourcePosition.getFile().getPath() + ":" +
-				(sourcePosition.getLine() + 1);
-			m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
+
+			// Check if the breakpoint already exists
+			Integer number = findBreakpointNumber(breakpoint);
+			if (number != null)
 			{
-				@Override
-				public void onGdbCommandCompleted(GdbEvent event)
-				{
-					onGdbBreakpointReady(event, breakpoint);
-				}
-			});
+				// Re-enable the breakpoint
+				m_gdb.sendCommand("-break-enable " + number);
+			}
+			else
+			{
+				// Set the breakpoint
+				XSourcePosition sourcePosition = breakpoint.getSourcePosition();
+				String command = "-break-insert -f " + sourcePosition.getFile().getPath() + ":" +
+					(sourcePosition.getLine() + 1);
+				m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
+					{
+						@Override
+						public void onGdbCommandCompleted(GdbEvent event)
+						{
+							onGdbBreakpointReady(event, breakpoint);
+						}
+					});
+			}
 		}
 		catch (IOException ex)
 		{
@@ -77,7 +91,31 @@ public class GdbBreakpointHandler extends
 	public void unregisterBreakpoint(@NotNull XLineBreakpoint<GdbBreakpointProperties> breakpoint,
 		boolean temporary)
 	{
-		m_log.warn("unregisterBreakpoint: stub");
+		try
+		{
+			Integer number = findBreakpointNumber(breakpoint);
+			if (number == null)
+			{
+				m_log.error("Cannot remove breakpoint; could not find it in breakpoint table");
+				return;
+			}
+
+			if (!temporary)
+			{
+				// Delete the breakpoint
+				m_gdb.sendCommand("-break-delete " + number);
+				m_breakpoints.remove(number);
+			}
+			else
+			{
+				// Disable the breakpoint
+				m_gdb.sendCommand("-break-disable " + number);
+			}
+		}
+		catch (IOException ex)
+		{
+			m_log.error("Failed to communicate with GDB", ex);
+		}
 	}
 
 	/**
@@ -88,6 +126,26 @@ public class GdbBreakpointHandler extends
 	public XLineBreakpoint<GdbBreakpointProperties> findBreakpoint(int number)
 	{
 		return m_breakpoints.get(number);
+	}
+
+	/**
+	 * Finds a breakpoint's GDB number.
+	 * @param breakpoint The breakpoint to search for.
+	 * @return The breakpoint number, or null if it could not be found.
+	 */
+	public Integer findBreakpointNumber(XLineBreakpoint<GdbBreakpointProperties> breakpoint)
+	{
+		List<Integer> numbers = m_breakpoints.getKeysByValue(breakpoint);
+		if (numbers == null || numbers.isEmpty())
+		{
+			return null;
+		}
+		else if (numbers.size() > 1)
+		{
+			m_log.warn("Found multiple breakpoint numbers for breakpoint; only returning the " +
+				"first");
+		}
+		return numbers.get(0);
 	}
 
 	/**
