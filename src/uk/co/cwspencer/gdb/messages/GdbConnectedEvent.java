@@ -13,7 +13,7 @@ import java.util.Map;
  */
 @SuppressWarnings("unused")
 @GdbMiEvent(recordType = GdbMiRecord.Type.Immediate, className = "connected")
-public class GdbConnectedEvent
+public class GdbConnectedEvent extends GdbEvent
 {
 	/**
 	 * The execution address.

@@ -1,6 +1,7 @@
 package uk.co.cwspencer.gdb.messages;
 
 import com.intellij.openapi.diagnostic.Logger;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiList;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResult;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
@@ -80,6 +81,7 @@ public class GdbMiMessageConverter
 				if (match)
 				{
 					// Found a matching event type wrapper
+					List<GdbMiResult> results = record.results;
 
 					// If it is a 'done' event then search for a more specific event type
 					if (commandType != null && clazz.equals(GdbDoneEvent.class))
@@ -98,7 +100,24 @@ public class GdbMiMessageConverter
 
 							if (doneEventAnnotation.command().equals(commandType))
 							{
-								// Found a match; use this class instead
+								// Found a match; check if we need to transpose a specific result
+								// onto this class
+								if (!doneEventAnnotation.transpose().isEmpty())
+								{
+									List<GdbMiResult> transposedResults = transposeDoneEvent(record,
+										doneEventAnnotation);
+									if (transposedResults == null)
+									{
+										m_log.warn("Class " + doneEventClass.getName() + " is " +
+											"trying to transpose '" +
+											doneEventAnnotation.transpose() + "', but the result " +
+											"does not exist or is not a tuple or list of results");
+										break;
+									}
+
+									results = transposedResults;
+								}
+
 								clazz = doneEventClass;
 								break;
 							}
@@ -106,7 +125,7 @@ public class GdbMiMessageConverter
 					}
 
 					// Process the object
-					event = (GdbEvent) processObject(clazz, record.results);
+					event = (GdbEvent) processObject(clazz, results);
 					break;
 				}
 
@@ -114,6 +133,37 @@ public class GdbMiMessageConverter
 
 		}
 		return event;
+	}
+
+	/**
+	 * Extracts data from the result requested by the class.
+	 * @param record The result record.
+	 * @param doneEventAnnotation The annotation on the class.
+	 * @return The new list of results, or null if it could not be transposed.
+	 */
+	private static List<GdbMiResult> transposeDoneEvent(GdbMiResultRecord record,
+		GdbMiDoneEvent doneEventAnnotation)
+	{
+		// Search for the requested result
+		for (GdbMiResult result : record.results)
+		{
+			if (result.variable.equals(doneEventAnnotation.transpose()))
+			{
+				// Found it; check it is an appropriate type (it must be a tuple or a list of
+				// results)
+				if (!(result.value.type == GdbMiValue.Type.Tuple ||
+					(result.value.type == GdbMiValue.Type.List &&
+					(result.value.list.type == GdbMiList.Type.Empty ||
+					result.value.list.type == GdbMiList.Type.Results))))
+				{
+					return null;
+				}
+
+				return result.value.type ==
+					GdbMiValue.Type.Tuple ? result.value.tuple : result.value.list.results;
+			}
+		}
+		return null;
 	}
 
 	/**

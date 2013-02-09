@@ -8,6 +8,6 @@ import uk.co.cwspencer.gdb.messages.annotations.GdbMiEvent;
  */
 @SuppressWarnings("unused")
 @GdbMiEvent(recordType = GdbMiRecord.Type.Immediate, className = "exit")
-public class GdbExitEvent
+public class GdbExitEvent extends GdbEvent
 {
 }

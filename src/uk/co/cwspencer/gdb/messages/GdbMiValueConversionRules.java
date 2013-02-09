@@ -163,9 +163,20 @@ public class GdbMiValueConversionRules
 			{
 				return value.string;
 			}
-			if (type.equals(Integer.class))
+			else if (type.equals(Integer.class))
 			{
 				return Integer.parseInt(value.string);
+			}
+			else if (type.equals(Boolean.class))
+			{
+				if (value.string.equals("y"))
+				{
+					return true;
+				}
+				else if (value.string.equals("n"))
+				{
+					return false;
+				}
 			}
 		}
 		return null;

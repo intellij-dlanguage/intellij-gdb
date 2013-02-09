@@ -20,6 +20,7 @@ public class GdbMiEventTypes
 	 * An array of types of 'done' events.
 	 */
 	public static Class<?>[] doneEventTypes = {
+		GdbBreakpoint.class,
 		GdbStackTrace.class,
 		GdbVariables.class };
 }

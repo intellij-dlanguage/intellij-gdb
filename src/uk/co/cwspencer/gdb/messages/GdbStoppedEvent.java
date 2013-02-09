@@ -41,22 +41,6 @@ public class GdbStoppedEvent extends GdbEvent
 	}
 
 	/**
-	 * Possible breakpoint dispositions.
-	 */
-	@GdbMiEnum
-	public enum BreakpointDisposition
-	{
-		/**
-		 * The breakpoint will not be deleted.
-		 */
-		Keep,
-		/**
-		 * The breakpoint will be deleted at the next stop.
-		 */
-		Del
-	}
-
-	/**
 	 * The reason the target stopped.
 	 */
 	@GdbMiField(name = "reason", valueType = GdbMiValue.Type.String)
@@ -66,7 +50,7 @@ public class GdbStoppedEvent extends GdbEvent
 	 * The breakpoint disposition.
 	 */
 	@GdbMiField(name = "disp", valueType = GdbMiValue.Type.String)
-	public BreakpointDisposition breakpointDisposition;
+	public GdbBreakpoint.BreakpointDisposition breakpointDisposition;
 
 	/**
 	 * The breakpoint number.

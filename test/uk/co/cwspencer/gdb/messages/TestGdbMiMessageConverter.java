@@ -35,7 +35,7 @@ public class TestGdbMiMessageConverter
 
 		GdbConnectedEvent connectedEvent = (GdbConnectedEvent) object;
 		Assert.assertEquals(new Long(0xfe00a300l), connectedEvent.address);
-		Assert.assertEquals("??", connectedEvent.function);
+		Assert.assertNull(connectedEvent.function);
 		Assert.assertTrue(connectedEvent.arguments.isEmpty());
 	}
 
@@ -123,7 +123,7 @@ public class TestGdbMiMessageConverter
 
 			GdbStoppedEvent stoppedEvent = (GdbStoppedEvent) object;
 			Assert.assertEquals(GdbStoppedEvent.Reason.BreakpointHit, stoppedEvent.reason);
-			Assert.assertEquals(GdbStoppedEvent.BreakpointDisposition.Keep,
+			Assert.assertEquals(GdbBreakpoint.BreakpointDisposition.Keep,
 				stoppedEvent.breakpointDisposition);
 			Assert.assertEquals(new Integer(1), stoppedEvent.breakpointNumber);
 			Assert.assertEquals(new Integer(0), stoppedEvent.threadId);
@@ -253,5 +253,55 @@ public class TestGdbMiMessageConverter
 				frame.fileAbsolute);
 			Assert.assertEquals(new Integer(17), frame.line);
 		}
+	}
+
+	/**
+	 * Verifies the correct conversion of a breakpoint message.
+	 */
+	@Test
+	public void testBreakpoint() throws UnsupportedEncodingException
+	{
+		// Parse the message
+		GdbMiParser parser = new GdbMiParser();
+		String messageStr =
+			"^done," +
+			"bkpt={" +
+				"number=\"1\"," +
+				"type=\"breakpoint\"," +
+				"disp=\"keep\"," +
+				"enabled=\"y\"," +
+				"addr=\"0x000100d0\"," +
+				"func=\"main\"," +
+				"file=\"hello.c\"," +
+				"fullname=\"/home/foo/hello.c\"," +
+				"line=\"5\"," +
+				"thread-groups=[\"i1\"]," +
+				"times=\"0\"}\r\n" +
+			"(gdb)\r\n";
+		parser.process(messageStr.getBytes("US-ASCII"));
+		GdbMiMessage message = parser.getMessages().get(0);
+
+		// Convert the message
+		GdbMiResultRecord record = (GdbMiResultRecord) message.records.get(0);
+		Object object = GdbMiMessageConverter.processRecord(record, "-break-insert");
+		Assert.assertNotNull(object);
+		Assert.assertTrue(object instanceof GdbBreakpoint);
+
+		GdbBreakpoint breakpoint = (GdbBreakpoint) object;
+		Assert.assertEquals(new Integer(1), breakpoint.number);
+		Assert.assertEquals(GdbBreakpoint.Type.Breakpoint, breakpoint.type);
+		Assert.assertEquals(GdbBreakpoint.BreakpointDisposition.Keep, breakpoint.disposition);
+		Assert.assertEquals(true, breakpoint.enabled);
+		Assert.assertEquals(GdbBreakpoint.AddressAvailability.Available,
+			breakpoint.addressAvailability);
+		Assert.assertEquals(new Long(0x000100d0), breakpoint.address);
+		Assert.assertEquals("main", breakpoint.function);
+		Assert.assertEquals("hello.c", breakpoint.fileRelative);
+		Assert.assertEquals("/home/foo/hello.c", breakpoint.fileAbsolute);
+		Assert.assertEquals(new Integer(5), breakpoint.line);
+		Assert.assertEquals(new Integer("0"), breakpoint.hitCount);
+
+		Assert.assertEquals(1, breakpoint.threadGroups.size());
+		Assert.assertEquals("i1", breakpoint.threadGroups.get(0));
 	}
 }
