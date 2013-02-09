@@ -19,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import uk.co.cwspencer.gdb.Gdb;
 import uk.co.cwspencer.gdb.GdbListener;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
+import uk.co.cwspencer.gdb.messages.GdbRunningEvent;
 import uk.co.cwspencer.gdb.messages.GdbStoppedEvent;
 import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
@@ -202,7 +203,13 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	{
 		if (event instanceof GdbStoppedEvent)
 		{
+			// Target has stopped
 			getSession().positionReached(new GdbSuspendContext(m_gdb, (GdbStoppedEvent) event));
+		}
+		else if (event instanceof GdbRunningEvent)
+		{
+			// Target has started
+			getSession().sessionResumed();
 		}
 	}
 
