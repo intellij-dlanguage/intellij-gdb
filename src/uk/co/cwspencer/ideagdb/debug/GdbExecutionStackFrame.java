@@ -134,7 +134,11 @@ public class GdbExecutionStackFrame extends XStackFrame
 	{
 		try
 		{
-			String command = "-stack-list-variables --all-values";
+			// The top frame doesn't have a level set
+			int level = m_frame.level == null ? 0 : m_frame.level;
+
+			// TODO: Use correct thread
+			String command = "-stack-list-variables --thread 1 --frame " + level + " --all-values";
 			m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
 				{
 					@Override
