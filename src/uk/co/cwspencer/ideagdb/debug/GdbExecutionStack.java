@@ -42,7 +42,7 @@ public class GdbExecutionStack extends XExecutionStack
 		// Get the top of the stack
 		if (stopEvent.frame != null)
 		{
-			m_topFrame = new GdbExecutionStackFrame(stopEvent.frame);
+			m_topFrame = new GdbExecutionStackFrame(gdb, stopEvent.frame);
 		}
 	}
 
@@ -117,7 +117,7 @@ public class GdbExecutionStack extends XExecutionStack
 		List<GdbExecutionStackFrame> stack = new ArrayList<GdbExecutionStackFrame>();
 		for (GdbStackFrame frame : stackTrace.stack)
 		{
-			stack.add(new GdbExecutionStackFrame(frame));
+			stack.add(new GdbExecutionStackFrame(m_gdb, frame));
 		}
 
 		// Pass the data on

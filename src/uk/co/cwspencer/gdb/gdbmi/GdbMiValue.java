@@ -68,7 +68,18 @@ public class GdbMiValue
 			break;
 
 		case Tuple:
-			sb.append(tuple);
+			{
+				sb.append("{");
+				for (int i = 0; i != tuple.size(); ++i)
+				{
+					sb.append(tuple.get(i));
+					if (i < tuple.size() - 1)
+					{
+						sb.append(", ");
+					}
+				}
+				sb.append("}");
+			}
 			break;
 
 		case List:

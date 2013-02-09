@@ -233,8 +233,9 @@ public class GdbMiValueConversionRules
 	}
 
 	/**
-	 * Converts list of tuples to a map. The tuples must all have two elements each. The variable
-	 * names of the tuples are discarded.
+	 * Converts list of tuples to a map. The tuples must all have one or two elements each. If the
+	 * tuples only have one value then that value is used as the key and the value will be null. The
+	 * variable names of the tuples are discarded.
 	 */
 	@SuppressWarnings("unchecked")
 	@GdbMiConversionRule
@@ -274,7 +275,8 @@ public class GdbMiValueConversionRules
 		for (GdbMiValue subValue : value.list.values)
 		{
 			// Verify the value is a tuple and contains two elements
-			if (subValue.type != GdbMiValue.Type.Tuple || subValue.tuple.size() != 2)
+			if (subValue.type != GdbMiValue.Type.Tuple || subValue.tuple.size() < 1 ||
+				subValue.tuple.size() > 2)
 			{
 				return null;
 			}
@@ -286,11 +288,15 @@ public class GdbMiValueConversionRules
 				return null;
 			}
 
-			Object jValue = GdbMiMessageConverter.applyConversionRules(mapValueType, null,
-				subValue.tuple.get(1).value);
-			if (jValue == null)
+			Object jValue = null;
+			if (subValue.tuple.size() == 2)
 			{
-				return null;
+				jValue = GdbMiMessageConverter.applyConversionRules(mapValueType, null,
+					subValue.tuple.get(1).value);
+				if (jValue == null)
+				{
+					return null;
+				}
 			}
 
 			map.put(key, jValue);
