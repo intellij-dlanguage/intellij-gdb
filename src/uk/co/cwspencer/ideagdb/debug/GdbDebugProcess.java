@@ -14,6 +14,8 @@ import com.intellij.ui.content.Content;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XSourcePosition;
+import com.intellij.xdebugger.breakpoints.XBreakpoint;
+import com.intellij.xdebugger.breakpoints.XBreakpointHandler;
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import org.jetbrains.annotations.NotNull;
 import uk.co.cwspencer.gdb.Gdb;
@@ -21,6 +23,8 @@ import uk.co.cwspencer.gdb.GdbListener;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbRunningEvent;
 import uk.co.cwspencer.gdb.messages.GdbStoppedEvent;
+import uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointHandler;
+import uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointProperties;
 import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
@@ -46,6 +50,9 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	// The GDB instance
 	private Gdb m_gdb;
 
+	// The breakpoint handler
+	private GdbBreakpointHandler m_breakpointHandler;
+
 	/**
 	 * Constructor; launches GDB.
 	 */
@@ -64,6 +71,15 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 
 		// Create the GDB console
 		m_gdbConsole = new GdbConsoleView(m_gdb, m_facet.getModule().getProject());
+
+		// Create the breakpoint handler
+		m_breakpointHandler = new GdbBreakpointHandler(m_gdb, this);
+	}
+
+	@Override
+	public XBreakpointHandler<?>[] getBreakpointHandlers()
+	{
+		return new GdbBreakpointHandler[]{ m_breakpointHandler };
 	}
 
 	@NotNull
@@ -204,12 +220,44 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 		if (event instanceof GdbStoppedEvent)
 		{
 			// Target has stopped
-			getSession().positionReached(new GdbSuspendContext(m_gdb, (GdbStoppedEvent) event));
+			onGdbStoppedEvent((GdbStoppedEvent) event);
 		}
 		else if (event instanceof GdbRunningEvent)
 		{
 			// Target has started
 			getSession().sessionResumed();
+		}
+	}
+
+	/**
+	 * Handles a 'target stopped' event from GDB.
+ 	 * @param event The event
+	 */
+	private void onGdbStoppedEvent(GdbStoppedEvent event)
+	{
+		GdbSuspendContext suspendContext = new GdbSuspendContext(m_gdb, event);
+
+		// Find the breakpoint if necessary
+		XBreakpoint<GdbBreakpointProperties> breakpoint = null;
+		if (event.reason == GdbStoppedEvent.Reason.BreakpointHit && event.breakpointNumber != null)
+		{
+			breakpoint = m_breakpointHandler.findBreakpoint(event.breakpointNumber);
+		}
+
+		if (breakpoint != null)
+		{
+			// TODO: Support log expressions
+			boolean suspendProcess = getSession().breakpointReached(breakpoint, null,
+				suspendContext);
+			if (!suspendProcess)
+			{
+				// Resume execution
+				resume();
+			}
+		}
+		else
+		{
+			getSession().positionReached(suspendContext);
 		}
 	}
 

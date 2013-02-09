@@ -40,5 +40,7 @@
     <configurationType implementation="uk.co.cwspencer.ideagdb.run.GdbRunConfigurationType"/>
     <programRunner implementation="uk.co.cwspencer.ideagdb.run.GdbRunner" order="last"/>
     <facetType implementation="uk.co.cwspencer.ideagdb.facet.GdbFacetType"/>
+    <xdebugger.breakpointType
+        implementation="uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointType"/>
   </extensions>
 </idea-plugin>
