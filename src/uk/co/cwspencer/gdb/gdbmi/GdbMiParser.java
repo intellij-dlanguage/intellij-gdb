@@ -36,7 +36,7 @@ public class GdbMiParser
 	}
 
 	// State of the parser FSM
-	private Stack<FsmState> m_state = new Stack<FsmState>();
+	private Stack<FsmState> m_state;
 
 	// Lexer
 	private GdbMiLexer m_lexer = new GdbMiLexer();
@@ -50,6 +50,15 @@ public class GdbMiParser
 
 	// List of unprocessed records
 	private List<GdbMiRecord> m_records = new ArrayList<GdbMiRecord>();
+
+	/**
+	 * Constructor.
+	 */
+	public GdbMiParser()
+	{
+		m_state = new Stack<FsmState>();
+		m_state.push(FsmState.Idle);
+	}
 
 	/**
 	 * Returns a list of unprocessed records. The caller should erase items from this list as they
@@ -81,7 +90,6 @@ public class GdbMiParser
 		m_lexer.process(data, length);
 
 		// Parse the data
-		m_state.push(FsmState.Idle);
 		List<GdbMiToken> tokens = m_lexer.getTokens();
 		for (GdbMiToken token : tokens)
 		{
