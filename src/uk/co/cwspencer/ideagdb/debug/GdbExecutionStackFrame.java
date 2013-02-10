@@ -114,7 +114,13 @@ public class GdbExecutionStackFrame extends XStackFrame
 			else
 			{
 				component.append(function + "()", SimpleTextAttributes.GRAY_ATTRIBUTES);
-				component.append(" (0x" + Long.toHexString(m_frame.address) + ")",
+				component.append(" (", SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
+				if (m_frame.module != null)
+				{
+					component.append(m_frame.module + ":",
+						SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
+				}
+				component.append("0x" + Long.toHexString(m_frame.address) + ")",
 					SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
 			}
 		}
