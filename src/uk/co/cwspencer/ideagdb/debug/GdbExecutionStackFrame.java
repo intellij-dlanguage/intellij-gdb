@@ -113,7 +113,6 @@ public class GdbExecutionStackFrame extends XStackFrame
 			}
 			else
 			{
-
 				component.append(function + "()", SimpleTextAttributes.GRAY_ATTRIBUTES);
 				component.append(" (0x" + Long.toHexString(m_frame.address) + ")",
 					SimpleTextAttributes.GRAY_ITALIC_ATTRIBUTES);
@@ -142,6 +141,9 @@ public class GdbExecutionStackFrame extends XStackFrame
 	@Override
 	public void computeChildren(@NotNull final XCompositeNode node)
 	{
+		// TODO: This can be called multiple times if the user changes the value of a variable. We
+		// shouldn't really call -stack-list-variables more than once in this case (i.e., only call
+		// -var-update after the first call)
 		try
 		{
 			// TODO: Use correct thread
@@ -195,7 +197,7 @@ public class GdbExecutionStackFrame extends XStackFrame
 		XValueChildrenList children = new XValueChildrenList(variables.objects.size());
 		for (GdbVariableObject variable : variables.objects)
 		{
-			children.add(variable.expression, new GdbValue(variable));
+			children.add(variable.expression, new GdbValue(m_gdb, variable));
 		}
 		node.addChildren(children, true);
 	}
