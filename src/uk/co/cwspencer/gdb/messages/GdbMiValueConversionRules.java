@@ -169,13 +169,26 @@ public class GdbMiValueConversionRules
 			}
 			else if (type.equals(Boolean.class))
 			{
-				if (value.string.equals("y"))
+				if (value.string.equals("y") || value.string.equals("true"))
 				{
 					return true;
 				}
-				else if (value.string.equals("n"))
+				else if (value.string.equals("n") || value.string.equals("false"))
 				{
 					return false;
+				}
+				else
+				{
+					// Try parsing it as an integer
+					try
+					{
+						int intValue = Integer.parseInt(value.string);
+						return intValue != 0;
+					}
+					catch (NumberFormatException ex)
+					{
+						// Don't know how to convert this to a bool
+					}
 				}
 			}
 		}

@@ -5,22 +5,24 @@ import com.intellij.xdebugger.frame.XValue;
 import com.intellij.xdebugger.frame.XValueNode;
 import com.intellij.xdebugger.frame.XValuePlace;
 import org.jetbrains.annotations.NotNull;
+import uk.co.cwspencer.gdb.messages.GdbVariableObject;
 
 /**
  * Class for providing information about a value from GDB.
  */
 public class GdbValue extends XValue
 {
-	private String m_value;
+	private GdbVariableObject m_variableObject;
 
-	public GdbValue(String value)
+	public GdbValue(GdbVariableObject variableObject)
 	{
-		m_value = value;
+		m_variableObject = variableObject;
 	}
 
 	@Override
 	public void computePresentation(@NotNull XValueNode node, @NotNull XValuePlace place)
 	{
-		node.setPresentation(PlatformIcons.VARIABLE_ICON, "SomeType", "'" + m_value + "'", false);
+		node.setPresentation(PlatformIcons.VARIABLE_ICON, m_variableObject.type,
+			m_variableObject.value, false);
 	}
 }

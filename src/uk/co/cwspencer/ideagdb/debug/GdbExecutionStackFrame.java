@@ -19,11 +19,14 @@ import uk.co.cwspencer.gdb.Gdb;
 import uk.co.cwspencer.gdb.messages.GdbErrorEvent;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbStackFrame;
+import uk.co.cwspencer.gdb.messages.GdbVariableObject;
+import uk.co.cwspencer.gdb.messages.GdbVariableObjects;
 import uk.co.cwspencer.gdb.messages.GdbVariables;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -141,12 +144,11 @@ public class GdbExecutionStackFrame extends XStackFrame
 	{
 		try
 		{
-			// The top frame doesn't have a level set
-			int level = m_frame.level == null ? 0 : m_frame.level;
-
 			// TODO: Use correct thread
-			String command = "-stack-list-variables --thread 1 --frame " + level + " --all-values";
-			m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
+			int thread = 1;
+			// The top frame doesn't have a level set
+			int frame = m_frame.level == null ? 0 : m_frame.level;
+			m_gdb.getVariablesForFrame(thread, frame, new Gdb.GdbEventCallback()
 				{
 					@Override
 					public void onGdbCommandCompleted(GdbEvent event)
@@ -167,37 +169,34 @@ public class GdbExecutionStackFrame extends XStackFrame
 	 * @param event The event.
 	 * @param node The node passed to computeChildren().
 	 */
-	private void onGdbVariablesReady(GdbEvent event, XCompositeNode node)
+	private void onGdbVariablesReady(GdbEvent event, final XCompositeNode node)
 	{
 		if (event instanceof GdbErrorEvent)
 		{
 			node.setErrorMessage(((GdbErrorEvent) event).message);
 			return;
 		}
-		if (!(event instanceof GdbVariables))
+		if (!(event instanceof GdbVariableObjects))
 		{
 			node.setErrorMessage("Unexpected data received from GDB");
-			m_log.warn("Unexpected event " + event + " received from -stack-list-variables " +
-				"request");
+			m_log.warn("Unexpected event " + event + " received from variable objects request");
 			return;
 		}
 
 		// Inspect the data
-		GdbVariables variables = (GdbVariables) event;
-		if (variables.variables == null || variables.variables.isEmpty())
+		GdbVariableObjects variables = (GdbVariableObjects) event;
+		if (variables.objects == null || variables.objects.isEmpty())
 		{
 			// No data
 			node.addChildren(XValueChildrenList.EMPTY, true);
 		}
 
 		// Build a XValueChildrenList
-		XValueChildrenList children = new XValueChildrenList(variables.variables.size());
-		for (Map.Entry<String, String> variable : variables.variables.entrySet())
+		XValueChildrenList children = new XValueChildrenList(variables.objects.size());
+		for (GdbVariableObject variable : variables.objects)
 		{
-			children.add(variable.getKey(), new GdbValue(variable.getValue()));
+			children.add(variable.expression, new GdbValue(variable));
 		}
-
-		// Pass the data on
 		node.addChildren(children, true);
 	}
 }

@@ -16,7 +16,6 @@ public class GdbStackTrace extends GdbDoneEvent
 	/**
 	 * The stack frames.
 	 */
-	@SuppressWarnings("unused")
 	@GdbMiField(name = "stack", valueType = GdbMiValue.Type.List)
 	public List<GdbStackFrame> stack;
 }

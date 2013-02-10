@@ -13,6 +13,8 @@ import java.util.Map;
 @GdbMiDoneEvent(command = "-stack-list-variables")
 public class GdbVariables extends GdbDoneEvent
 {
+	// TODO: The tuple contains 'arg="1"' if the variable is an argument
+
 	/**
 	 * The variables.
 	 */
