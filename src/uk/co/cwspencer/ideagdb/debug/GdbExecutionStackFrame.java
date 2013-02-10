@@ -41,17 +41,22 @@ public class GdbExecutionStackFrame extends XStackFrame
 	// The GDB instance
 	private Gdb m_gdb;
 
+	// The thread the frame is in
+	private int m_thread;
+
 	// The GDB stack frame
 	private GdbStackFrame m_frame;
 
 	/**
 	 * Constructor.
 	 * @param gdb Handle to the GDB instance.
+	 * @param thread The thread the frame is in.
 	 * @param frame The GDB stack frame to wrap.
 	 */
-	public GdbExecutionStackFrame(Gdb gdb, GdbStackFrame frame)
+	public GdbExecutionStackFrame(Gdb gdb, int thread, GdbStackFrame frame)
 	{
 		m_gdb = gdb;
+		m_thread = thread;
 		m_frame = frame;
 	}
 
@@ -152,11 +157,9 @@ public class GdbExecutionStackFrame extends XStackFrame
 		// -var-update after the first call)
 		try
 		{
-			// TODO: Use correct thread
-			int thread = 1;
 			// The top frame doesn't have a level set
 			int frame = m_frame.level == null ? 0 : m_frame.level;
-			m_gdb.getVariablesForFrame(thread, frame, new Gdb.GdbEventCallback()
+			m_gdb.getVariablesForFrame(m_thread, frame, new Gdb.GdbEventCallback()
 				{
 					@Override
 					public void onGdbCommandCompleted(GdbEvent event)

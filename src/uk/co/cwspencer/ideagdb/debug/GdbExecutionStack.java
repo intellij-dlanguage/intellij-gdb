@@ -26,6 +26,9 @@ public class GdbExecutionStack extends XExecutionStack
 	// The GDB instance
 	private Gdb m_gdb;
 
+	// The active thread
+	private int m_thread = 1;
+
 	// The top of the stack
 	private GdbExecutionStackFrame m_topFrame;
 
@@ -39,10 +42,16 @@ public class GdbExecutionStack extends XExecutionStack
 		super("Stack");
 		m_gdb = gdb;
 
+		// Get the thread ID
+		if (stopEvent.threadId != null)
+		{
+			m_thread = stopEvent.threadId;
+		}
+
 		// Get the top of the stack
 		if (stopEvent.frame != null)
 		{
-			m_topFrame = new GdbExecutionStackFrame(gdb, stopEvent.frame);
+			m_topFrame = new GdbExecutionStackFrame(gdb, m_thread, stopEvent.frame);
 		}
 	}
 
@@ -117,7 +126,7 @@ public class GdbExecutionStack extends XExecutionStack
 		List<GdbExecutionStackFrame> stack = new ArrayList<GdbExecutionStackFrame>();
 		for (GdbStackFrame frame : stackTrace.stack)
 		{
-			stack.add(new GdbExecutionStackFrame(m_gdb, frame));
+			stack.add(new GdbExecutionStackFrame(m_gdb, m_thread, frame));
 		}
 
 		// Pass the data on
