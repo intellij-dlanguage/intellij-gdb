@@ -17,9 +17,9 @@ import uk.co.cwspencer.gdb.messages.GdbVariables;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,17 +44,17 @@ public class Gdb
 		public void onGdbCommandCompleted(GdbEvent event);
 	}
 
-	// Information about a command that has been sent but GDB hasn't yet responded to
-	private class PendingCommand
+	// Information about a command that is awaiting processing
+	private class CommandData
 	{
-		// The command that was sent, excluding any arguments
-		String commandType;
+		// The command
+		String command;
 		// The user provided callback; may be null
 		GdbEventCallback callback;
 
-		PendingCommand(String commandType, GdbEventCallback callback)
+		CommandData(String command, GdbEventCallback callback)
 		{
-			this.commandType = commandType;
+			this.command = command;
 			this.callback = callback;
 		}
 	}
@@ -68,8 +68,12 @@ public class Gdb
 	// Handle for the GDB process
 	private Process m_process;
 
-	// Thread which reads data from GDB
+	// Threads which read/write data from GDB
 	private Thread m_readThread;
+	private Thread m_writeThread;
+
+	// Flag indicating whether we are stopping
+	private Boolean m_stopping = false;
 
 	// Flag indicating whether we have received the first record from GDB yet
 	private boolean m_firstRecord = true;
@@ -77,8 +81,11 @@ public class Gdb
 	// Token which the next GDB command will be sent with
 	private long m_token = 1;
 
+	// Commands that are waiting to be sent
+	private List<CommandData> m_queuedCommands = new ArrayList<CommandData>();
+
 	// Commands that have been sent to GDB and are awaiting a response
-	private final Map<Long, PendingCommand> m_pendingCommands = new HashMap<Long, PendingCommand>();
+	private final Map<Long, CommandData> m_pendingCommands = new HashMap<Long, CommandData>();
 
 	// GDB variable objects
 	private final Map<String, GdbVariableObject> m_variableObjectsByExpression =
@@ -87,13 +94,14 @@ public class Gdb
 		new HashMap<String, GdbVariableObject>();
 
 	/**
-	 * Constructor; launches GDB.
+	 * Constructor; prepares GDB.
 	 * @param gdbPath The path to the GDB executable.
 	 * @param workingDirectory Working directory to launch the GDB process in. May be null.
 	 * @param listener Listener that is to receive GDB events.
 	 */
 	public Gdb(final String gdbPath, final String workingDirectory, GdbListener listener)
 	{
+		// Prepare GDB
 		m_listener = listener;
 		m_readThread = new Thread(new Runnable()
 			{
@@ -103,6 +111,44 @@ public class Gdb
 					runGdb(gdbPath, workingDirectory);
 				}
 			});
+	}
+
+	/**
+	 * Finalizer. Kills GDB and the I/O threads.
+	 */
+	@Override
+	protected synchronized void finalize() throws Throwable
+	{
+		// Terminate the I/O threads
+		if (m_readThread != null)
+		{
+			m_readThread.interrupt();
+			m_readThread.join();
+		}
+		if (m_writeThread != null)
+		{
+			m_stopping = true;
+			m_writeThread.notify();
+			m_writeThread.interrupt();
+			m_writeThread.join();
+		}
+
+		// Kill the process
+		if (m_process != null)
+		{
+			m_process.destroy();
+		}
+	}
+
+	/**
+	 * Starts GDB.
+	 */
+	public void start()
+	{
+		if (m_readThread.isAlive())
+		{
+			throw new IllegalStateException("GDB has already been started");
+		}
 		m_readThread.start();
 	}
 
@@ -110,11 +156,10 @@ public class Gdb
 	 * Sends an arbitrary command to GDB.
 	 * @param command The command to send. This may be a normal CLI command or a GDB/MI command. It
 	 * should not contain any line breaks.
-	 * @return The token the command was sent with.
 	 */
-	public long sendCommand(String command) throws IOException
+	public void sendCommand(String command) throws IOException
 	{
-		return sendCommand(command, null);
+		sendCommand(command, null);
 	}
 
 	/**
@@ -122,37 +167,13 @@ public class Gdb
 	 * @param command The command to send. This may be a normal CLI command or a GDB/MI command. It
 	 * should not contain any line breaks.
 	 * @param callback The callback function.
-	 * @return The token the command was sent with.
 	 */
-	public long sendCommand(String command, GdbEventCallback callback) throws IOException
+	public synchronized void sendCommand(String command, GdbEventCallback callback)
+		throws IOException
 	{
-		// Construct the message
-		long token = m_token++;
-		m_listener.onGdbCommandSent(command, token);
-
-		StringBuilder sb = new StringBuilder();
-		sb.append(token);
-		sb.append(command);
-		sb.append("\r\n");
-
-		// Get the command type
-		int separatorIndex = command.indexOf(' ');
-		String commandType = separatorIndex == -1 ? command : command.substring(0, separatorIndex);
-
-		// Save the callback now since it is possible otherwise that GDB would respond before we
-		// insert the item into the map
-		PendingCommand pendingCommand = new PendingCommand(commandType, callback);
-		synchronized (m_pendingCommands)
-		{
-			m_pendingCommands.put(token, pendingCommand);
-		}
-
-		// Send the message
-		byte[] message = sb.toString().getBytes(m_ascii);
-		m_process.getOutputStream().write(message);
-		m_process.getOutputStream().flush();
-
-		return token;
+		// Queue the command
+		m_queuedCommands.add(new CommandData(command, callback));
+		notify();
 	}
 
 	/**
@@ -207,24 +228,22 @@ public class Gdb
 		{
 			// Create variable objects for each of the variables if we haven't done so already
 			final GdbVariables variables = (GdbVariables) event;
-			synchronized (m_variableObjectsByExpression)
+			for (final String variable : variables.variables.keySet())
 			{
-				for (final String variable : variables.variables.keySet())
+				GdbVariableObject variableObject =
+					m_variableObjectsByExpression.get(variable);
+				if (variableObject == null)
 				{
-					GdbVariableObject variableObject = m_variableObjectsByExpression.get(variable);
-					if (variableObject == null)
-					{
-						String command = "-var-create --thread " + thread + " --frame " + frame +
-							" - @ " + variable;
-						sendCommand(command, new GdbEventCallback()
+					String command = "-var-create --thread " + thread + " --frame " +
+						frame + " - @ " + variable;
+					sendCommand(command, new GdbEventCallback()
+						{
+							@Override
+							public void onGdbCommandCompleted(GdbEvent event)
 							{
-								@Override
-								public void onGdbCommandCompleted(GdbEvent event)
-								{
-									onGdbNewVariableObjectReady(event, variable, callback);
-								}
-							});
-					}
+								onGdbNewVariableObjectReady(event, variable, callback);
+							}
+						});
 				}
 			}
 
@@ -283,11 +302,8 @@ public class Gdb
 
 		// Save the new variable object
 		variableObject.expression = expression;
-		synchronized (m_variableObjectsByExpression)
-		{
-			m_variableObjectsByExpression.put(expression, variableObject);
-			m_variableObjectsByName.put(variableObject.name, variableObject);
-		}
+		m_variableObjectsByExpression.put(expression, variableObject);
+		m_variableObjectsByName.put(variableObject.name, variableObject);
 	}
 
 	/**
@@ -313,63 +329,60 @@ public class Gdb
 			return;
 		}
 
-		GdbVariableObjects list = new GdbVariableObjects();
-		list.objects = new ArrayList<GdbVariableObject>();
-		synchronized (m_variableObjectsByExpression)
+		// Update variable objects with changes
+		GdbVariableObjectChanges changes = (GdbVariableObjectChanges) event;
+		if (changes.changes != null)
 		{
-			// Update variable objects with changes
-			GdbVariableObjectChanges changes = (GdbVariableObjectChanges) event;
-			if (changes.changes != null)
+			for (GdbVariableObjectChange change : changes.changes)
 			{
-				for (GdbVariableObjectChange change : changes.changes)
+				if (change.name == null)
 				{
-					if (change.name == null)
-					{
-						m_log.warn("Received a GDB variable object change with no name");
-						continue;
-					}
+					m_log.warn("Received a GDB variable object change with no name");
+					continue;
+				}
 
-					GdbVariableObject variableObject = m_variableObjectsByName.get(change.name);
-					if (variableObject == null)
-					{
-						m_log.warn("Received a GDB variable object change for a variable object " +
-							"that does not exist");
-						continue;
-					}
+				GdbVariableObject variableObject = m_variableObjectsByName.get(change.name);
+				if (variableObject == null)
+				{
+					m_log.warn("Received a GDB variable object change for a variable object " +
+						"that does not exist");
+					continue;
+				}
 
-					// Set the new value
-					switch (change.inScope)
-					{
-					case True:
-						// Update the value
-						variableObject.value = change.value;
-						break;
+				// Set the new value
+				switch (change.inScope)
+				{
+				case True:
+					// Update the value
+					variableObject.value = change.value;
+					break;
 
-					case False:
-						// Reset the value
-						variableObject.value = null;
-						break;
+				case False:
+					// Reset the value
+					variableObject.value = null;
+					break;
 
-					default:
-						// TODO: Delete the variable object
-						variableObject.value = null;
-					}
+				default:
+					// TODO: Delete the variable object
+					variableObject.value = null;
+				}
 
-					// Set the new type
-					if (change.typeChanged && change.newType != null)
-					{
-						variableObject.type = change.newType;
-					}
+				// Set the new type
+				if (change.typeChanged && change.newType != null)
+				{
+					variableObject.type = change.newType;
 				}
 			}
+		}
 
-			// Construct the list of variable object the user requested
-			for (String expression : variables)
-			{
-				GdbVariableObject object = m_variableObjectsByExpression.get(expression);
-				assert object != null;
-				list.objects.add(object);
-			}
+		// Construct the list of variable object the user requested
+		GdbVariableObjects list = new GdbVariableObjects();
+		list.objects = new ArrayList<GdbVariableObject>();
+		for (String expression : variables)
+		{
+			GdbVariableObject object = m_variableObjectsByExpression.get(expression);
+			assert object != null;
+			list.objects.add(object);
 		}
 
 		callback.onGdbCommandCompleted(list);
@@ -393,11 +406,26 @@ public class Gdb
 			{
 				workingDirectoryFile = new File(workingDirectory);
 			}
-			m_process = Runtime.getRuntime().exec(commandLine, null, workingDirectoryFile);
+			Process process = Runtime.getRuntime().exec(commandLine, null, workingDirectoryFile);
+			InputStream stream = process.getInputStream();
+
+			// Save a reference to the process and launch the writer thread
+			synchronized (this)
+			{
+				m_process = process;
+				m_writeThread = new Thread(new Runnable()
+					{
+						@Override
+						public void run()
+						{
+							processWriteQueue();
+						}
+					});
+				m_writeThread.start();
+			}
 
 			// Start listening for data
 			GdbMiParser parser = new GdbMiParser();
-			InputStream stream = m_process.getInputStream();
 			byte[] buffer = new byte[4096];
 			int bytes;
 			while ((bytes = stream.read(buffer)) != -1)
@@ -423,6 +451,77 @@ public class Gdb
 				}
 				records.clear();
 			}
+		}
+		catch (Throwable ex)
+		{
+			m_listener.onGdbError(ex);
+		}
+	}
+
+	/**
+	 * Thread function for processing the write queue.
+	 */
+	private void processWriteQueue()
+	{
+		try
+		{
+			OutputStream stream;
+			List<CommandData> queuedCommands = new ArrayList<CommandData>();
+			while (true)
+			{
+				synchronized (this)
+				{
+					// Wait for some data to process
+					while (m_queuedCommands.isEmpty())
+					{
+						wait();
+					}
+
+					// Exit cleanly if we are stopping
+					if (m_stopping)
+					{
+						return;
+					}
+
+					// Do the processing we need before dropping out of synchronised mode
+					stream = m_process.getOutputStream();
+
+					// Insert the commands into the pending queue
+					long token = m_token;
+					for (CommandData command : m_queuedCommands)
+					{
+						m_pendingCommands.put(token++, command);
+					}
+
+					// Swap the queues
+					List<CommandData> tmp = queuedCommands;
+					queuedCommands = m_queuedCommands;
+					m_queuedCommands = tmp;
+				}
+
+				// Send the queued commands to GDB
+				StringBuilder sb = new StringBuilder();
+				for (CommandData command : queuedCommands)
+				{
+					// Construct the message
+					long token = m_token++;
+					m_listener.onGdbCommandSent(command.command, token);
+
+					sb.append(token);
+					sb.append(command.command);
+					sb.append("\r\n");
+				}
+				queuedCommands.clear();
+
+				// Send the messages
+				byte[] message = sb.toString().getBytes(m_ascii);
+				stream.write(message);
+				stream.flush();
+			}
+		}
+		catch (InterruptedException ex)
+		{
+			// We are exiting
 		}
 		catch (Throwable ex)
 		{
@@ -481,17 +580,20 @@ public class Gdb
 		m_listener.onResultRecordReceived(record);
 
 		// Find the pending command data
-		PendingCommand pendingCommand = null;
+		CommandData pendingCommand = null;
 		String commandType = null;
 		if (record.userToken != null)
 		{
-			synchronized (m_pendingCommands)
+			synchronized (this)
 			{
 				pendingCommand = m_pendingCommands.remove(record.userToken);
 			}
 			if (pendingCommand != null)
 			{
-				commandType = pendingCommand.commandType;
+				// Get the command type
+				int separatorIndex = pendingCommand.command.indexOf(' ');
+				commandType = separatorIndex == -1 ? pendingCommand.command :
+					pendingCommand.command.substring(0, separatorIndex);
 			}
 		}
 

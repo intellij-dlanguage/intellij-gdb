@@ -66,7 +66,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 		// TODO: Make this an option on the facet
 		String workingDirectory = new File(m_facet.getConfiguration().APP_PATH).getParent();
 
-		// Launch GDB
+		// Prepare GDB
 		m_gdb = new Gdb(m_facet.getConfiguration().GDB_PATH, workingDirectory, this);
 
 		// Create the GDB console
@@ -74,6 +74,9 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 
 		// Create the breakpoint handler
 		m_breakpointHandler = new GdbBreakpointHandler(m_gdb, this);
+
+		// Launch the process
+		m_gdb.start();
 	}
 
 	@Override
