@@ -169,7 +169,8 @@ public class GdbMiValueConversionRules
 			}
 			else if (type.equals(Boolean.class))
 			{
-				if (value.string.equals("y") || value.string.equals("true"))
+				if (value.string.equals("y") || value.string.equals("true") ||
+					value.string.equals("*"))
 				{
 					return true;
 				}

@@ -47,25 +47,18 @@ public class GdbConsoleView
 				@Override
 				public void actionPerformed(ActionEvent event)
 				{
-					try
+					String command = event.getActionCommand();
+					if (command.isEmpty() && m_lastCommand != null)
 					{
-						String command = event.getActionCommand();
-						if (command.isEmpty() && m_lastCommand != null)
-						{
-							// Resend the last command
-							m_gdb.sendCommand(m_lastCommand);
-						}
-						else if (!command.isEmpty())
-						{
-							// Send the command to GDB
-							m_lastCommand = command;
-							m_prompt.setText("");
-							m_gdb.sendCommand(command);
-						}
+						// Resend the last command
+						m_gdb.sendCommand(m_lastCommand);
 					}
-					catch (IOException ex)
+					else if (!command.isEmpty())
 					{
-						m_log.error("GDB error", ex);
+						// Send the command to GDB
+						m_lastCommand = command;
+						m_prompt.setText("");
+						m_gdb.sendCommand(command);
 					}
 				}
 			});

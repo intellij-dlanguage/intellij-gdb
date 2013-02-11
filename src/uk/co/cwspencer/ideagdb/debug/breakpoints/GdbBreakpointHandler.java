@@ -46,39 +46,29 @@ public class GdbBreakpointHandler extends
 	public void registerBreakpoint(
 		@NotNull final XLineBreakpoint<GdbBreakpointProperties> breakpoint)
 	{
-		try
-		{
-			// TODO: I think we can use tracepoints here if the suspend policy isn't to stop the
-			// process
+		// TODO: I think we can use tracepoints here if the suspend policy isn't to stop the process
 
-			// Check if the breakpoint already exists
-			Integer number = findBreakpointNumber(breakpoint);
-			if (number != null)
-			{
-				// Re-enable the breakpoint
-				m_gdb.sendCommand("-break-enable " + number);
-			}
-			else
-			{
-				// Set the breakpoint
-				XSourcePosition sourcePosition = breakpoint.getSourcePosition();
-				String command = "-break-insert -f " + sourcePosition.getFile().getPath() + ":" +
-					(sourcePosition.getLine() + 1);
-				m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
-					{
-						@Override
-						public void onGdbCommandCompleted(GdbEvent event)
-						{
-							onGdbBreakpointReady(event, breakpoint);
-						}
-					});
-			}
-		}
-		catch (IOException ex)
+		// Check if the breakpoint already exists
+		Integer number = findBreakpointNumber(breakpoint);
+		if (number != null)
 		{
-			m_debugProcess.getSession().updateBreakpointPresentation(breakpoint,
-				AllIcons.Debugger.Db_invalid_breakpoint, "Failed to communicate with GDB");
-			m_log.error("Failed to communicate with GDB", ex);
+			// Re-enable the breakpoint
+			m_gdb.sendCommand("-break-enable " + number);
+		}
+		else
+		{
+			// Set the breakpoint
+			XSourcePosition sourcePosition = breakpoint.getSourcePosition();
+			String command = "-break-insert -f " + sourcePosition.getFile().getPath() + ":" +
+				(sourcePosition.getLine() + 1);
+			m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
+				{
+					@Override
+					public void onGdbCommandCompleted(GdbEvent event)
+					{
+						onGdbBreakpointReady(event, breakpoint);
+					}
+				});
 		}
 	}
 
@@ -91,33 +81,26 @@ public class GdbBreakpointHandler extends
 	public void unregisterBreakpoint(@NotNull XLineBreakpoint<GdbBreakpointProperties> breakpoint,
 		boolean temporary)
 	{
-		try
+		Integer number = findBreakpointNumber(breakpoint);
+		if (number == null)
 		{
-			Integer number = findBreakpointNumber(breakpoint);
-			if (number == null)
-			{
-				m_log.error("Cannot remove breakpoint; could not find it in breakpoint table");
-				return;
-			}
+			m_log.error("Cannot remove breakpoint; could not find it in breakpoint table");
+			return;
+		}
 
-			if (!temporary)
+		if (!temporary)
+		{
+			// Delete the breakpoint
+			m_gdb.sendCommand("-break-delete " + number);
+			synchronized (m_breakpoints)
 			{
-				// Delete the breakpoint
-				m_gdb.sendCommand("-break-delete " + number);
-				synchronized (m_breakpoints)
-				{
-					m_breakpoints.remove(number);
-				}
-			}
-			else
-			{
-				// Disable the breakpoint
-				m_gdb.sendCommand("-break-disable " + number);
+				m_breakpoints.remove(number);
 			}
 		}
-		catch (IOException ex)
+		else
 		{
-			m_log.error("Failed to communicate with GDB", ex);
+			// Disable the breakpoint
+			m_gdb.sendCommand("-break-disable " + number);
 		}
 	}
 

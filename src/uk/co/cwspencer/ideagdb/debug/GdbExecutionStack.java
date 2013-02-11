@@ -10,6 +10,7 @@ import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbStackFrame;
 import uk.co.cwspencer.gdb.messages.GdbStackTrace;
 import uk.co.cwspencer.gdb.messages.GdbStoppedEvent;
+import uk.co.cwspencer.gdb.messages.GdbThread;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,8 +27,8 @@ public class GdbExecutionStack extends XExecutionStack
 	// The GDB instance
 	private Gdb m_gdb;
 
-	// The active thread
-	private int m_thread = 1;
+	// The thread
+	private GdbThread m_thread;
 
 	// The top of the stack
 	private GdbExecutionStackFrame m_topFrame;
@@ -35,23 +36,22 @@ public class GdbExecutionStack extends XExecutionStack
 	/**
 	 * Constructor.
 	 * @param gdb Handle to the GDB instance.
-	 * @param stopEvent The stop event.
+	 * @param thread The thread.
 	 */
-	public GdbExecutionStack(Gdb gdb, GdbStoppedEvent stopEvent)
+	public GdbExecutionStack(Gdb gdb, GdbThread thread)
 	{
-		super("Stack");
-		m_gdb = gdb;
+		// The super() has to be the first call, hence the ugly..
+		super("[" + thread.id + "]" +
+			(thread.name != null ? " " + thread.name :
+				(thread.targetId != null ? " " + thread.targetId : "")));
 
-		// Get the thread ID
-		if (stopEvent.threadId != null)
-		{
-			m_thread = stopEvent.threadId;
-		}
+		m_gdb = gdb;
+		m_thread = thread;
 
 		// Get the top of the stack
-		if (stopEvent.frame != null)
+		if (thread.frame != null)
 		{
-			m_topFrame = new GdbExecutionStackFrame(gdb, m_thread, stopEvent.frame);
+			m_topFrame = new GdbExecutionStackFrame(gdb, m_thread.id, thread.frame);
 		}
 	}
 
@@ -75,24 +75,16 @@ public class GdbExecutionStack extends XExecutionStack
 	@Override
 	public void computeStackFrames(int firstFrameIndex, final XStackFrameContainer container)
 	{
-		try
-		{
-			String command = "-stack-list-frames " + firstFrameIndex + " " +
-				(firstFrameIndex + StackFrameRequestCount);
-			m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
+		String command = "-stack-list-frames " + firstFrameIndex + " " +
+			(firstFrameIndex + StackFrameRequestCount);
+		m_gdb.sendCommand(command, new Gdb.GdbEventCallback()
+			{
+				@Override
+				public void onGdbCommandCompleted(GdbEvent event)
 				{
-					@Override
-					public void onGdbCommandCompleted(GdbEvent event)
-					{
-						onGdbStackTraceReady(event, container);
-					}
-				});
-		}
-		catch (IOException ex)
-		{
-			container.errorOccurred("Failed to communicate with GDB");
-			m_log.error("Failed to communicate with GDB", ex);
-		}
+					onGdbStackTraceReady(event, container);
+				}
+			});
 	}
 
 	/**
@@ -126,7 +118,7 @@ public class GdbExecutionStack extends XExecutionStack
 		List<GdbExecutionStackFrame> stack = new ArrayList<GdbExecutionStackFrame>();
 		for (GdbStackFrame frame : stackTrace.stack)
 		{
-			stack.add(new GdbExecutionStackFrame(m_gdb, m_thread, frame));
+			stack.add(new GdbExecutionStackFrame(m_gdb, m_thread.id, frame));
 		}
 
 		// Pass the data on

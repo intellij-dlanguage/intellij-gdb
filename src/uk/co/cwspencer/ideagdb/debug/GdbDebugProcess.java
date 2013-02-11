@@ -20,9 +20,12 @@ import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider;
 import org.jetbrains.annotations.NotNull;
 import uk.co.cwspencer.gdb.Gdb;
 import uk.co.cwspencer.gdb.GdbListener;
+import uk.co.cwspencer.gdb.messages.GdbErrorEvent;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbRunningEvent;
 import uk.co.cwspencer.gdb.messages.GdbStoppedEvent;
+import uk.co.cwspencer.gdb.messages.GdbThread;
+import uk.co.cwspencer.gdb.messages.GdbThreadInfo;
 import uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointHandler;
 import uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointProperties;
 import uk.co.cwspencer.ideagdb.facet.GdbFacet;
@@ -32,6 +35,7 @@ import uk.co.cwspencer.ideagdb.run.GdbExecutionResult;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class GdbDebugProcess extends XDebugProcess implements GdbListener
 {
@@ -98,14 +102,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void startStepOver()
 	{
-		try
-		{
-			m_gdb.sendCommand("-exec-next");
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
-		}
+		m_gdb.sendCommand("-exec-next");
 	}
 
 	@Override
@@ -123,14 +120,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void startStepInto()
 	{
-		try
-		{
-			m_gdb.sendCommand("-exec-step");
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
-		}
+		m_gdb.sendCommand("-exec-step");
 	}
 
 	/**
@@ -139,14 +129,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void startStepOut()
 	{
-		try
-		{
-			m_gdb.sendCommand("-exec-finish");
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
-		}
+		m_gdb.sendCommand("-exec-finish");
 	}
 
 	/**
@@ -155,14 +138,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void stop()
 	{
-		try
-		{
-			m_gdb.sendCommand("-gdb-exit");
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
-		}
+		m_gdb.sendCommand("-gdb-exit");
 	}
 
 	/**
@@ -171,14 +147,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void resume()
 	{
-		try
-		{
-			m_gdb.sendCommand("-exec-continue --all");
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
-		}
+		m_gdb.sendCommand("-exec-continue --all");
 	}
 
 	@Override
@@ -235,22 +204,15 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void onGdbStarted()
 	{
-		try
+		// Send startup commands
+		String[] commandsArray = m_facet.getConfiguration().STARTUP_COMMANDS.split("\\r?\\n");
+		for (String command : commandsArray)
 		{
-			// Send startup commands
-			String[] commandsArray = m_facet.getConfiguration().STARTUP_COMMANDS.split("\\r?\\n");
-			for (String command : commandsArray)
+			command = command.trim();
+			if (!command.isEmpty())
 			{
-				command = command.trim();
-				if (!command.isEmpty())
-				{
-					m_gdb.sendCommand(command);
-				}
+				m_gdb.sendCommand(command);
 			}
-		}
-		catch (IOException ex)
-		{
-			onGdbError(ex);
 		}
 	}
 
@@ -289,31 +251,24 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	 * Handles a 'target stopped' event from GDB.
  	 * @param event The event
 	 */
-	private void onGdbStoppedEvent(GdbStoppedEvent event)
+	private void onGdbStoppedEvent(final GdbStoppedEvent event)
 	{
-		GdbSuspendContext suspendContext = new GdbSuspendContext(m_gdb, event);
-
-		// Find the breakpoint if necessary
-		XBreakpoint<GdbBreakpointProperties> breakpoint = null;
-		if (event.reason == GdbStoppedEvent.Reason.BreakpointHit && event.breakpointNumber != null)
+		if (m_gdb.hasCapability("thread-info"))
 		{
-			breakpoint = m_breakpointHandler.findBreakpoint(event.breakpointNumber);
-		}
-
-		if (breakpoint != null)
-		{
-			// TODO: Support log expressions
-			boolean suspendProcess = getSession().breakpointReached(breakpoint, null,
-				suspendContext);
-			if (!suspendProcess)
-			{
-				// Resume execution
-				resume();
-			}
+			// Get information about the threads
+			m_gdb.sendCommand("-thread-info", new Gdb.GdbEventCallback()
+				{
+					@Override
+					public void onGdbCommandCompleted(GdbEvent threadInfoEvent)
+					{
+						onGdbThreadInfoReady(threadInfoEvent, event);
+					}
+				});
 		}
 		else
 		{
-			getSession().positionReached(suspendContext);
+			// Handle it immediately without any thread data
+			handleTargetStopped(event, null);
 		}
 	}
 
@@ -391,5 +346,67 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 		sb.append(record);
 		sb.append("\n");
 		m_gdbConsole.getConsole().print(sb.toString(), ConsoleViewContentType.SYSTEM_OUTPUT);
+	}
+
+	/**
+	 * Callback function for when GDB has responded to our thread information request.
+	 * @param threadInfoEvent The event.
+	 * @param stoppedEvent The 'target stopped' event that caused us to make the request.
+	 */
+	private void onGdbThreadInfoReady(GdbEvent threadInfoEvent, GdbStoppedEvent stoppedEvent)
+	{
+		List<GdbThread> threads = null;
+
+		if (threadInfoEvent instanceof GdbErrorEvent)
+		{
+			m_log.warn("Failed to get thread information: " +
+				((GdbErrorEvent) threadInfoEvent).message);
+		}
+		else if (!(threadInfoEvent instanceof GdbThreadInfo))
+		{
+			m_log.warn("Unexpected event " + threadInfoEvent + " received from -thread-info " +
+				"request");
+		}
+		else
+		{
+			threads = ((GdbThreadInfo) threadInfoEvent).threads;
+		}
+
+		// Handle the event
+		handleTargetStopped(stoppedEvent, threads);
+	}
+
+	/**
+	 * Handles a 'target stopped' event.
+	 * @param stoppedEvent The event.
+	 * @param threads Thread information, if available.
+	 */
+	private void handleTargetStopped(GdbStoppedEvent stoppedEvent, List<GdbThread> threads)
+	{
+		GdbSuspendContext suspendContext = new GdbSuspendContext(m_gdb, stoppedEvent, threads);
+
+		// Find the breakpoint if necessary
+		XBreakpoint<GdbBreakpointProperties> breakpoint = null;
+		if (stoppedEvent.reason == GdbStoppedEvent.Reason.BreakpointHit &&
+			stoppedEvent.breakpointNumber != null)
+		{
+			breakpoint = m_breakpointHandler.findBreakpoint(stoppedEvent.breakpointNumber);
+		}
+
+		if (breakpoint != null)
+		{
+			// TODO: Support log expressions
+			boolean suspendProcess = getSession().breakpointReached(breakpoint, null,
+				suspendContext);
+			if (!suspendProcess)
+			{
+				// Resume execution
+				resume();
+			}
+		}
+		else
+		{
+			getSession().positionReached(suspendContext);
+		}
 	}
 }

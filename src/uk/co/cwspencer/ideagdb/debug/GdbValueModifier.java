@@ -46,23 +46,15 @@ public class GdbValueModifier extends XValueModifier
 	public void setValue(@NotNull String expression, @NotNull final XModificationCallback callback)
 	{
 		// TODO: Format the expression properly
-		try
-		{
-			m_gdb.sendCommand("-var-assign " + m_variableObject.name + " " + expression,
-				new Gdb.GdbEventCallback()
+		m_gdb.sendCommand("-var-assign " + m_variableObject.name + " " + expression,
+			new Gdb.GdbEventCallback()
+			{
+				@Override
+				public void onGdbCommandCompleted(GdbEvent event)
 				{
-					@Override
-					public void onGdbCommandCompleted(GdbEvent event)
-					{
-						onGdbNewValueReady(event, callback);
-					}
-				});
-		}
-		catch (IOException ex)
-		{
-			callback.errorOccurred("Failed to communicate with GDB");
-			m_log.error("Failed to communicate with GDB", ex);
-		}
+					onGdbNewValueReady(event, callback);
+				}
+			});
 	}
 
 	/**

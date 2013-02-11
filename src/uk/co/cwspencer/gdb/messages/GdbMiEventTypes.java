@@ -21,7 +21,9 @@ public class GdbMiEventTypes
 	 */
 	public static Class<?>[] doneEventTypes = {
 		GdbBreakpoint.class,
+		GdbFeatures.class,
 		GdbStackTrace.class,
+		GdbThreadInfo.class,
 		GdbVariableObject.class,
 		GdbVariableObjectChanges.class,
 		GdbVariableObjects.class,
