@@ -28,9 +28,21 @@ public class GdbBreakpointType extends XLineBreakpointType<GdbBreakpointProperti
 	@Override
 	public boolean canPutAt(@NotNull VirtualFile file, int line, @NotNull Project project)
 	{
-		// TODO: Actually work out if we can put a breakpoint here
-		return true;
+		// TODO: We can't just always return true because otherwise it prevents Java breakpoints
+		// being set. It seems like there should be a better way to do this though..
+		String extension = file.getExtension();
+		if (extension != null &&
+			(extension.equals("c") ||
+			extension.equals("cpp") ||
+			extension.equals("cxx") ||
+			extension.equals("cc") ||
+			extension.equals("h") ||
+			extension.equals("hpp") ||
+			extension.equals("hh") ||
+			extension.equals("hxx")))
+		{
+			return true;
+		}
+		return false;
 	}
-
-
 }
