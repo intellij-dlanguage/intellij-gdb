@@ -4,12 +4,14 @@ import uk.co.cwspencer.gdb.gdbmi.GdbMiValue;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiDoneEvent;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiEnum;
 import uk.co.cwspencer.gdb.messages.annotations.GdbMiField;
+import uk.co.cwspencer.gdb.messages.annotations.GdbMiObject;
 
 /**
  * A GDB variable object. This is returned from a -var-create request.
  */
 @SuppressWarnings("unused")
 @GdbMiDoneEvent(command = "-var-create")
+@GdbMiObject
 public class GdbVariableObject extends GdbDoneEvent
 {
 	/**
