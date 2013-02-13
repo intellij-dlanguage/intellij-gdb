@@ -61,6 +61,21 @@ public class GdbExecutionStackFrame extends XStackFrame
 	}
 
 	/**
+	 * Returns an object that can be used to determine if two stack frames after a debugger step
+	 * are the same.
+	 * @return The equality object.
+	 */
+	@Nullable
+	@Override
+	public Object getEqualityObject()
+	{
+		// TODO: This would be better if we could actually determine if two frames represent the
+		// same position, but it doesn't really matter, and this is good enough to stop the debugger
+		// from collapsing variable trees when we step the debugger
+		return GdbExecutionStackFrame.class;
+	}
+
+	/**
 	 * Gets the source position of the stack frame, if available.
 	 * @return The source position, or null if it is not available.
 	 */
