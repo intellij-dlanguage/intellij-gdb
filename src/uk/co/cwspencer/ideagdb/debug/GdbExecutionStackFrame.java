@@ -9,6 +9,7 @@ import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.xdebugger.XDebuggerBundle;
 import com.intellij.xdebugger.XDebuggerUtil;
 import com.intellij.xdebugger.XSourcePosition;
+import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XExecutionStack;
 import com.intellij.xdebugger.frame.XStackFrame;
@@ -46,6 +47,10 @@ public class GdbExecutionStackFrame extends XStackFrame
 
 	// The GDB stack frame
 	private GdbStackFrame m_frame;
+	private int m_frameNo;
+
+	// The expression evaluator
+	private GdbEvaluator m_evaluator;
 
 	/**
 	 * Constructor.
@@ -58,6 +63,9 @@ public class GdbExecutionStackFrame extends XStackFrame
 		m_gdb = gdb;
 		m_thread = thread;
 		m_frame = frame;
+
+		// The top frame doesn't have a level set
+		m_frameNo = m_frame.level == null ? 0 : m_frame.level;
 	}
 
 	/**
@@ -73,6 +81,20 @@ public class GdbExecutionStackFrame extends XStackFrame
 		// same position, but it doesn't really matter, and this is good enough to stop the debugger
 		// from collapsing variable trees when we step the debugger
 		return GdbExecutionStackFrame.class;
+	}
+
+	/**
+	 * Returns an expression evaluator in the context of this stack frame.
+	 */
+	@Nullable
+	@Override
+	public XDebuggerEvaluator getEvaluator()
+	{
+		if (m_evaluator == null)
+		{
+			m_evaluator = new GdbEvaluator(m_gdb, m_thread, m_frameNo);
+		}
+		return m_evaluator;
 	}
 
 	/**
@@ -170,24 +192,14 @@ public class GdbExecutionStackFrame extends XStackFrame
 		// TODO: This can be called multiple times if the user changes the value of a variable. We
 		// shouldn't really call -stack-list-variables more than once in this case (i.e., only call
 		// -var-update after the first call)
-		try
-		{
-			// The top frame doesn't have a level set
-			int frame = m_frame.level == null ? 0 : m_frame.level;
-			m_gdb.getVariablesForFrame(m_thread, frame, new Gdb.GdbEventCallback()
+		m_gdb.getVariablesForFrame(m_thread, m_frameNo, new Gdb.GdbEventCallback()
+			{
+				@Override
+				public void onGdbCommandCompleted(GdbEvent event)
 				{
-					@Override
-					public void onGdbCommandCompleted(GdbEvent event)
-					{
-						onGdbVariablesReady(event, node);
-					}
-				});
-		}
-		catch (IOException ex)
-		{
-			node.setErrorMessage("Failed to communicate with GDB");
-			m_log.error("Failed to communicate with GDB", ex);
-		}
+					onGdbVariablesReady(event, node);
+				}
+			});
 	}
 
 	/**

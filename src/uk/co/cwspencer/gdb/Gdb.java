@@ -1,6 +1,7 @@
 package uk.co.cwspencer.gdb;
 
 import com.intellij.openapi.diagnostic.Logger;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiUtil;
 import uk.co.cwspencer.gdb.messages.GdbErrorEvent;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbFeatures;
@@ -207,7 +208,7 @@ public class Gdb
 	 * or GdbErrorEvent on failure.
 	 */
 	public void getVariablesForFrame(final int thread, final int frame,
-		final GdbEventCallback callback) throws IOException
+		final GdbEventCallback callback)
 	{
 		// Get a list of local variables
 		String command = "-stack-list-variables --thread " + thread + " --frame " + frame +
@@ -218,6 +219,48 @@ public class Gdb
 				public void onGdbCommandCompleted(GdbEvent event)
 				{
 					onGdbVariablesReady(event, thread, frame, callback);
+				}
+			});
+	}
+
+	/**
+	 * Evaluates the given expression in the given context.
+	 * @param thread The thread to evaluate the expression in.
+	 * @param frame The frame to evaluate the expression in.
+	 * @param expression The expression to evaluate.
+	 * @param callback The callback function.
+	 */
+	public void evaluateExpression(int thread, int frame, final String expression,
+		final GdbEventCallback callback)
+	{
+		// TODO: Make this more efficient
+		
+		// Create a new variable object if necessary
+		GdbVariableObject variableObject = m_variableObjectsByExpression.get(expression);
+		if (variableObject == null)
+		{
+			String command = "-var-create --thread " + thread + " --frame " + frame + " - @ " +
+				GdbMiUtil.formatGdbString(expression);
+			sendCommand(command, new GdbEventCallback()
+				{
+					@Override
+					public void onGdbCommandCompleted(GdbEvent event)
+					{
+						onGdbNewVariableObjectReady(event, expression, callback);
+					}
+				});
+		}
+
+		// Update existing variable objects
+		sendCommand("-var-update --thread " + thread + " --frame " + frame + " --all-values *",
+			new GdbEventCallback()
+			{
+				@Override
+				public void onGdbCommandCompleted(GdbEvent event)
+				{
+					HashSet<String> expressions = new HashSet<String>();
+					expressions.add(expression);
+					onGdbVariableObjectsUpdated(event, expressions, callback);
 				}
 			});
 	}
@@ -625,8 +668,10 @@ public class Gdb
 		for (String expression : variables)
 		{
 			GdbVariableObject object = m_variableObjectsByExpression.get(expression);
-			assert object != null;
-			list.objects.add(object);
+			if (object != null)
+			{
+				list.objects.add(object);
+			}
 		}
 
 		callback.onGdbCommandCompleted(list);
