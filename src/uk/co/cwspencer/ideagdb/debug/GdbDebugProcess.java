@@ -28,13 +28,12 @@ import uk.co.cwspencer.gdb.messages.GdbThread;
 import uk.co.cwspencer.gdb.messages.GdbThreadInfo;
 import uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointHandler;
 import uk.co.cwspencer.ideagdb.debug.breakpoints.GdbBreakpointProperties;
-import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiResultRecord;
 import uk.co.cwspencer.gdb.gdbmi.GdbMiStreamRecord;
 import uk.co.cwspencer.ideagdb.run.GdbExecutionResult;
+import uk.co.cwspencer.ideagdb.run.GdbRunConfiguration;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 public class GdbDebugProcess extends XDebugProcess implements GdbListener
@@ -45,11 +44,11 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	private GdbDebuggerEditorsProvider m_editorsProvider = new GdbDebuggerEditorsProvider();
 	private ConsoleView m_console;
 
+	// The run configuration
+	private GdbRunConfiguration m_configuration;
+
 	// The GDB console
 	private GdbConsoleView m_gdbConsole;
-
-	// The GDB facet
-	private GdbFacet m_facet;
 
 	// The GDB instance
 	private Gdb m_gdb;
@@ -63,18 +62,18 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	public GdbDebugProcess(XDebugSession session, GdbExecutionResult executionResult)
 	{
 		super(session);
+		m_configuration = executionResult.getConfiguration();
 		m_console = (ConsoleView) executionResult.getExecutionConsole();
-		m_facet = executionResult.getFacet();
 
 		// Get the working directory
-		// TODO: Make this an option on the facet
-		String workingDirectory = new File(m_facet.getConfiguration().APP_PATH).getParent();
+		// TODO: Make this an option on the run configuration
+		String workingDirectory = new File(m_configuration.APP_PATH).getParent();
 
 		// Prepare GDB
-		m_gdb = new Gdb(m_facet.getConfiguration().GDB_PATH, workingDirectory, this);
+		m_gdb = new Gdb(m_configuration.GDB_PATH, workingDirectory, this);
 
 		// Create the GDB console
-		m_gdbConsole = new GdbConsoleView(m_gdb, m_facet.getModule().getProject());
+		m_gdbConsole = new GdbConsoleView(m_gdb, session.getProject());
 
 		// Create the breakpoint handler
 		m_breakpointHandler = new GdbBreakpointHandler(m_gdb, this);
@@ -205,7 +204,7 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	public void onGdbStarted()
 	{
 		// Send startup commands
-		String[] commandsArray = m_facet.getConfiguration().STARTUP_COMMANDS.split("\\r?\\n");
+		String[] commandsArray = m_configuration.STARTUP_COMMANDS.split("\\r?\\n");
 		for (String command : commandsArray)
 		{
 			command = command.trim();

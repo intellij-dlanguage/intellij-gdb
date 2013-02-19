@@ -19,7 +19,6 @@ import com.intellij.openapi.util.WriteExternalException;
 import org.jdom.Element;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 
 import java.util.Collection;
 
@@ -29,6 +28,10 @@ public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigur
 {
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.run.GdbRunConfiguration");
+
+	public String GDB_PATH = "gdb";
+	public String APP_PATH = "";
+	public String STARTUP_COMMANDS = "";
 
 	public GdbRunConfiguration(String name, Project project, ConfigurationFactory factory)
 	{
@@ -63,19 +66,7 @@ public class GdbRunConfiguration extends ModuleBasedConfiguration<GdbRunConfigur
 	public RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment env)
 		throws ExecutionException
 	{
-		final Module module = getConfigurationModule().getModule();
-		if (module == null)
-		{
-			throw new ExecutionException("Module is not found");
-		}
-
-		final GdbFacet facet = GdbFacet.getInstance(module);
-		if (facet == null)
-		{
-			throw new ExecutionException("No GDB facet found for " + module.getName());
-		}
-
-		return new GdbRunProfileState(env, facet);
+		return new GdbRunProfileState(env, this);
 	}
 
 	@Override

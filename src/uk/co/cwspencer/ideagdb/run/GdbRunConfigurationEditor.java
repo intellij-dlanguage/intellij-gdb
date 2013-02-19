@@ -1,13 +1,11 @@
 package uk.co.cwspencer.ideagdb.run;
 
-import com.intellij.execution.ui.ConfigurationModuleSelector;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.module.Module;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SettingsEditor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.TextFieldWithBrowseButton;
 import org.jetbrains.annotations.NotNull;
-import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 
 import javax.swing.*;
 
@@ -17,45 +15,36 @@ public class GdbRunConfigurationEditor<T extends GdbRunConfiguration>
 	private static final Logger m_log =
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.run.GdbRunConfigurationEditor");
 
-	private JPanel m_panel;
-	private JComboBox m_modulesComboBox;
-
-	private final ConfigurationModuleSelector m_moduleSelector;
+	private JPanel m_contentPanel;
+	private TextFieldWithBrowseButton m_gdbPath;
+	private TextFieldWithBrowseButton m_appPath;
+	private JTextArea m_startupCommands;
 
 	public GdbRunConfigurationEditor(final Project project)
 	{
-		m_moduleSelector = new ConfigurationModuleSelector(project, m_modulesComboBox)
-			{
-				@Override
-				public boolean isModuleAccepted(Module module)
-				{
-					if (module == null || !super.isModuleAccepted(module))
-					{
-						return false;
-					}
-					final GdbFacet facet = GdbFacet.getInstance(module);
-					return facet != null;
-				}
-			};
 	}
 
 	@Override
 	protected void resetEditorFrom(T configuration)
 	{
-		m_moduleSelector.reset(configuration);
+		m_gdbPath.setText(configuration.GDB_PATH);
+		m_appPath.setText(configuration.APP_PATH);
+		m_startupCommands.setText(configuration.STARTUP_COMMANDS);
 	}
 
 	@Override
 	protected void applyEditorTo(T configuration) throws ConfigurationException
 	{
-		m_moduleSelector.applyTo(configuration);
+		configuration.GDB_PATH = m_gdbPath.getText();
+		configuration.APP_PATH = m_appPath.getText();
+		configuration.STARTUP_COMMANDS = m_startupCommands.getText();
 	}
 
 	@NotNull
 	@Override
 	protected JComponent createEditor()
 	{
-		return m_panel;
+		return m_contentPanel;
 	}
 
 	@Override

@@ -234,7 +234,7 @@ public class Gdb
 		final GdbEventCallback callback)
 	{
 		// TODO: Make this more efficient
-		
+
 		// Create a new variable object if necessary
 		GdbVariableObject variableObject = m_variableObjectsByExpression.get(expression);
 		if (variableObject == null)

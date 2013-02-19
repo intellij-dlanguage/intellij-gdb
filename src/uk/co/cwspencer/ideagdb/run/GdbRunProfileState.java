@@ -13,11 +13,11 @@ import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.xdebugger.DefaultDebugProcessHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import uk.co.cwspencer.ideagdb.facet.GdbFacet;
 
 public class GdbRunProfileState implements RunProfileState
 {
@@ -25,28 +25,29 @@ public class GdbRunProfileState implements RunProfileState
 		Logger.getInstance("#uk.co.cwspencer.ideagdb.run.GdbRunProfileState");
 
 	private ExecutionEnvironment m_env;
-	private GdbFacet m_facet;
+	private GdbRunConfiguration m_configuration;
 	private ConsoleView m_console;
 
-	public GdbRunProfileState(@NotNull ExecutionEnvironment env, @NotNull GdbFacet facet)
+	public GdbRunProfileState(@NotNull ExecutionEnvironment env, GdbRunConfiguration configuration)
 	{
 		m_env = env;
-		m_facet = facet;
+		m_configuration = configuration;
 	}
 
 	@Nullable
 	@Override
-	public ExecutionResult execute(Executor executor, @NotNull ProgramRunner runner) throws ExecutionException
+	public ExecutionResult execute(Executor executor, @NotNull ProgramRunner runner)
+		throws ExecutionException
 	{
 		ProcessHandler processHandler = new DefaultDebugProcessHandler();
 
 		// Create the console
-		Project project = m_facet.getModule().getProject();
+		Project project = m_configuration.getProject();
 		final TextConsoleBuilder builder =
 			TextConsoleBuilderFactory.getInstance().createBuilder(project);
 		m_console = builder.getConsole();
 
-		return new GdbExecutionResult(m_console, processHandler, m_facet);
+		return new GdbExecutionResult(m_console, processHandler, m_configuration);
 	}
 
 	@Override
