@@ -11,6 +11,7 @@ import com.intellij.xdebugger.frame.XValuePlace;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import uk.co.cwspencer.gdb.Gdb;
+import uk.co.cwspencer.gdb.gdbmi.GdbMiUtil;
 import uk.co.cwspencer.gdb.messages.GdbErrorEvent;
 import uk.co.cwspencer.gdb.messages.GdbEvent;
 import uk.co.cwspencer.gdb.messages.GdbVariableObject;
@@ -79,8 +80,8 @@ public class GdbValue extends XValue
 		}
 
 		// Get the children from GDB
-		m_gdb.sendCommand("-var-list-children --all-values " + m_variableObject.name,
-			new Gdb.GdbEventCallback()
+		m_gdb.sendCommand("-var-list-children --all-values " +
+			GdbMiUtil.formatGdbString(m_variableObject.name), new Gdb.GdbEventCallback()
 			{
 				@Override
 				public void onGdbCommandCompleted(GdbEvent event)
