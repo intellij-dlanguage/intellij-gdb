@@ -37,10 +37,7 @@ public class GdbExecutionStack extends XExecutionStack
 	 */
 	public GdbExecutionStack(Gdb gdb, GdbThread thread)
 	{
-		// The super() has to be the first call, hence the ugly..
-		super("[" + thread.id + "]" +
-			(thread.name != null ? " " + thread.name :
-				(thread.targetId != null ? " " + thread.targetId : "")));
+		super(thread.formatName());
 
 		m_gdb = gdb;
 		m_thread = thread;

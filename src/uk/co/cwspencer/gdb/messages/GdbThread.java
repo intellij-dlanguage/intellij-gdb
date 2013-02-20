@@ -70,4 +70,36 @@ public class GdbThread
 	 */
 	@GdbMiField(name = "core", valueType = GdbMiValue.Type.String)
 	public String core;
+
+	/**
+	 * Formats the thread into a string suitable to be prevented to the user.
+	 * @return The formatted thread name.
+	 */
+	public String formatName()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("[");
+		sb.append(id);
+		sb.append("]");
+
+		if (name != null)
+		{
+			sb.append(" ");
+			sb.append(name);
+		}
+		else if (targetId != null)
+		{
+			sb.append(" ");
+			sb.append(targetId);
+		}
+
+		if (frame != null && frame.function != null)
+		{
+			sb.append(" :: ");
+			sb.append(frame.function);
+			sb.append("()");
+		}
+
+		return sb.toString();
+	}
 }
