@@ -34,6 +34,8 @@ import uk.co.cwspencer.ideagdb.run.GdbExecutionResult;
 import uk.co.cwspencer.ideagdb.run.GdbRunConfiguration;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 public class GdbDebugProcess extends XDebugProcess implements GdbListener
@@ -55,6 +57,9 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 
 	// The breakpoint handler
 	private GdbBreakpointHandler m_breakpointHandler;
+
+	// Time formatter
+	private SimpleDateFormat m_timeFormat = new SimpleDateFormat("HH:mm:ss.SSS");
 
 	/**
 	 * Constructor; launches GDB.
@@ -223,8 +228,8 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	@Override
 	public void onGdbCommandSent(String command, long token)
 	{
-		m_gdbConsole.getConsole().print(token + "> " + command + "\n",
-			ConsoleViewContentType.USER_INPUT);
+		m_gdbConsole.getConsole().print(m_timeFormat.format(new Date()) + " " + token + "> " +
+			command + "\n", ConsoleViewContentType.USER_INPUT);
 	}
 
 	/**
@@ -312,6 +317,8 @@ public class GdbDebugProcess extends XDebugProcess implements GdbListener
 	{
 		// Log the record
 		StringBuilder sb = new StringBuilder();
+		sb.append(m_timeFormat.format(new Date()));
+		sb.append(" ");
 		if (record.userToken != null)
 		{
 			sb.append("<");
