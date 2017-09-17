@@ -1,7 +1,8 @@
-<idea-plugin version="2">
+<!DOCTYPE idea-plugin PUBLIC "Plugin/DTD" "http://plugins.intellij.net/plugin.dtd">
+<idea-plugin>
   <id>uk.co.cwspencer.ideagdb</id>
   <name>IdeaGDB</name>
-  <version>0.1</version>
+  <version>@version@</version>
   <vendor email="spencercw@gmail.com" url="http://cwspencer.co.uk/">Chris Spencer</vendor>
 
   <description><![CDATA[
@@ -15,8 +16,8 @@
       ]]>
   </change-notes>
 
-  <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Build+Number+Ranges for description -->
-  <idea-version since-build="107.105"/>
+  <!-- please see http://confluence.jetbrains.com/display/IDEADEV/Build+Number+Ranges for description -->
+  <idea-version since-build="171" until-build="173.*"/>
 
   <!-- please see http://confluence.jetbrains.net/display/IDEADEV/Plugin+Compatibility+with+IntelliJ+Platform+Products
        on how to target different products -->

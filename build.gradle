@@ -1,0 +1,115 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven { url 'http://dl.bintray.com/jetbrains/intellij-plugin-service' }
+    }
+}
+
+plugins {
+    id 'org.jetbrains.intellij' version '0.2.17'
+    id 'net.saliman.cobertura' version '2.3.1'
+    id 'com.github.kt3k.coveralls' version '2.8.1'
+}
+
+
+version = "${version}"
+
+
+apply plugin: 'cobertura'
+cobertura.coverageFormats = ['html', 'xml'] // coveralls plugin depends on xml format report
+cobertura.coverageSourceDirs = [sourceSets.main.java.srcDirs]
+
+allprojects {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+        options.compilerArgs << "-Xlint:deprecation"
+    }
+
+    tasks.withType(Test) {
+        useJUnit {
+            include '**/**/*Test.*' // any Java or Kotlin class that ends with 'Test'
+        }
+
+        testLogging {
+            beforeSuite { suite ->
+                if (!suite.parent) { // will match the outermost suite
+                    logger.lifecycle ' ----------- Building Tests -----------'
+                } else if (suite.className != null) {
+                    logger.lifecycle "${suite.className}:"
+                }
+            }
+
+            afterTest { descriptor, result ->
+                switch (result.resultType) {
+                    case 'SUCCESS':
+                    case 'PASSED':
+                        logger.lifecycle("\t✔ {}", descriptor.name)
+                        break
+                    case TestResult.ResultType.SKIPPED.name():
+                        logger.lifecycle("\t⛔ {}", descriptor.name)
+                        break
+                    case TestResult.ResultType.FAILURE.name():
+                        logger.lifecycle("\t✘ {}", descriptor.name)
+                        break
+                    default:
+                        logger.lifecycle("\t? {} {}", descriptor.name, result.resultType)
+                }
+            }
+
+            afterSuite { desc, result ->
+                if (!desc.parent) { // will match the outermost suite
+                    def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+                    def startItem = '|  ', endItem = '  |'
+                    def repeatLength = startItem.length() + output.length() + endItem.length()
+                    println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength) + '\n')
+                }
+            }
+        }
+    }
+
+    // take the version number defined in gradle build and use that in plugin.xml
+    task initConfig(type: Copy) {
+        from('src/main/resources') {
+            include '**/plugin.xml'
+            filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [version: version])
+        }
+    }
+
+    apply plugin: 'org.jetbrains.intellij'
+    intellij {
+        pluginName 'intellij-gdb'
+        version ideaVersion
+        updateSinceUntilBuild false
+
+        publishPlugin {
+            username System.getenv('JETBRAINS_USERNAME')
+            password System.getenv('JETBRAINS_PASSWORD')
+            channels publishChannels
+        }
+    }
+
+    task testCompilation(type: Test, group: 'Verification', dependsOn: [classes, testClasses]) {
+        useJUnit {
+            include '**/**/*Test.*'
+        }
+        testLogging {
+            exceptionFormat = 'full'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+
+apply plugin: 'idea'
+idea {
+    project {
+        jdkName = javaVersion
+        languageLevel = javaVersion
+    }
+}
